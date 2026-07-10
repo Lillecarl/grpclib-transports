@@ -152,3 +152,11 @@ class StdioChannel(client.Channel):
             self._pump_task.cancel()
         if self._stdio_transport is not None:
             self._stdio_transport.close()
+
+    async def aclose(self) -> None:
+        self.close()
+        if self._pump_task is not None:
+            with contextlib.suppress(asyncio.CancelledError):
+                await self._pump_task
+        with contextlib.suppress(ConnectionError, OSError):
+            await self._stdio_writer.wait_closed()

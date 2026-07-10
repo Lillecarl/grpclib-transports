@@ -21,7 +21,7 @@ def test_stdio(parallelism):
             await _bench(f"stdio (small, p={parallelism})", SMALL_PAYLOAD, SMALL_COUNT, channel, parallelism=parallelism)
             await _bench(f"stdio (large, p={parallelism})", LARGE_PAYLOAD, LARGE_COUNT, channel, parallelism=parallelism)
         finally:
-            channel.close()
+            await channel.aclose()
             proc.kill()
             serr = await asyncio.wait_for(proc.stderr.read(), timeout=3) if proc.stderr else b""
             if serr:

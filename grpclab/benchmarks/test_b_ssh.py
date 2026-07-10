@@ -58,7 +58,7 @@ def test_ssh(parallelism):
                 channel = SshChannel(stdout, stdin)
                 await _bench(f"ssh (small, p={parallelism})", SMALL_PAYLOAD, SMALL_COUNT, channel, parallelism=parallelism)
                 await _bench(f"ssh (large, p={parallelism})", LARGE_PAYLOAD, LARGE_COUNT, channel, parallelism=parallelism)
-                channel.close()
+                await channel.aclose()
             finally:
                 conn.close()
         finally:

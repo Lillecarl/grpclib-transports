@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import asyncio
+import contextlib
 import signal
 from typing import Any
 
@@ -186,3 +187,14 @@ class SshChannel(client.Channel):
         if self._ssh_transport is not None:
             self._ssh_transport.close()
         self._ssh_writer.close()
+
+    async def aclose(self) -> None:
+        self.close()
+        if self._pump_task is not None:
+            with contextlib.suppress(asyncio.CancelledError):
+                await self._pump_task
+
+        wait_closed = getattr(self._ssh_writer, "wait_closed", None)
+        if wait_closed is not None:
+            with contextlib.suppress(ConnectionError, OSError):
+                await wait_closed()
