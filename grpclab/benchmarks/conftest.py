@@ -38,6 +38,7 @@ DUMP_DIR.mkdir(parents=True, exist_ok=True)
 
 TIMEOUT = 30
 BENCH_SAMPLES = 3
+PROFILE_BENCHMARKS = os.environ.get("GRPCLAB_BENCH_PROFILE") == "1"
 
 _bench_results: list[dict] = []
 _dump_paths: list[Path] = []
@@ -185,13 +186,15 @@ def _run_with_dump(label, coro_factory):
     On timeout: dump all asyncio task stacks from the event loop *before*
     cancelling, so we capture the true deadlock state.
     """
-    from pyinstrument import Profiler
-
     loop = asyncio.new_event_loop()
     asyncio.set_event_loop(loop)
 
-    profiler = Profiler(interval=0.001)
-    profiler.start()
+    profiler = None
+    if PROFILE_BENCHMARKS:
+        from pyinstrument import Profiler
+
+        profiler = Profiler(interval=0.001)
+        profiler.start()
 
     coro = coro_factory()
     wrapper = _runner_with_timeout(coro, label, loop)
@@ -205,12 +208,13 @@ def _run_with_dump(label, coro_factory):
         _dump_tasks(label, loop)
         raise
     finally:
-        profiler.stop()
-        try:
-            profile_text = profiler.output_text(unicode=True, color=False, show_all=True)
-        except Exception:
-            profile_text = "Failed to generate pyinstrument text output"
-        _dump_profile(label, profile_text)
+        if profiler is not None:
+            profiler.stop()
+            try:
+                profile_text = profiler.output_text(unicode=True, color=False, show_all=True)
+            except Exception:
+                profile_text = "Failed to generate pyinstrument text output"
+            _dump_profile(label, profile_text)
 
         # Cancel any remaining tasks
         pending = asyncio.all_tasks(loop)
