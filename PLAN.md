@@ -296,7 +296,10 @@ core transport we care about, keep it as a direct dependency.
   anyone installing via pip.
 - Python >=3.12 is already declared.
 
-**Status**: pending
+**Status**: done — Declared `grpclib`, `h2`, and `asyncssh` as dependencies
+in `pyproject.toml`. Updated description to "gRPC over custom transports
+(stdio, SSH)". Previously `dependencies = []` despite every module
+importing these packages.
 
 ---
 

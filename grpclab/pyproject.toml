@@ -5,12 +5,16 @@ build-backend = "hatchling.build"
 [project]
 name = "grpclab"
 version = "0.1.0"
-description = "gRPC lab demo CLI"
+description = "gRPC over custom transports (stdio, SSH)"
 authors = [
     { name="Carl Andersson", email="github@lillecarl.com" }
 ]
 requires-python = ">=3.12"
-dependencies = []
+dependencies = [
+    "grpclib",
+    "h2",
+    "asyncssh",
+]
 
 [project.scripts]
 grpclab = "grpclab.__main__:main"
