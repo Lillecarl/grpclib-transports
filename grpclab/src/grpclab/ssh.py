@@ -1,11 +1,12 @@
 import asyncio
 import sys
-from typing import Optional
+from typing import Any, Optional
 
 from grpclib.protocol import H2Protocol
 from grpclib import client
 
 from grpclab.protocol import (
+    BaseCustomTransport,
     pump,
     BUF_HIGH,
     BUF_LOW,
@@ -14,14 +15,12 @@ from grpclab.protocol import (
 )
 
 
-class SshTransport(asyncio.Transport):
+class SshTransport(BaseCustomTransport):
 
-    def __init__(self, reader, writer):
+    def __init__(self, reader: Any, writer: Any):
         super().__init__()
         self._reader = reader
         self._writer = writer
-        self._protocol: Optional[asyncio.Protocol] = None
-        self._closing = False
 
         chan = writer._chan
         chan.set_write_buffer_limits(high=BUF_HIGH, low=BUF_LOW)
@@ -53,39 +52,25 @@ class SshTransport(asyncio.Transport):
         self._closing = True
         self._writer.close()
 
-    def is_closing(self) -> bool:
-        return self._closing
-
-    def get_extra_info(self, name, default=None):
+    def get_extra_info(self, name: str, default: Any = None) -> Any:
         if name in ("username", "session", "channel"):
             return self._writer.get_extra_info(name)
         return self._chan.get_extra_info(name, default)
 
-    def get_protocol(self):
-        return self._protocol
-
-    def set_protocol(self, protocol):
-        self._protocol = protocol
-
-    def abort(self):
+    def abort(self) -> None:
         self._closing = True
         self._writer.abort()
 
-    def can_write_eof(self):
+    def can_write_eof(self) -> bool:
         return self._chan.can_write_eof()
 
-    def write_eof(self):
+    def write_eof(self) -> None:
         self._writer.write_eof()
 
-    def pause_reading(self):
-        pass
-
-    def resume_reading(self):
-        pass
-
-    def set_write_buffer_limits(self, high=None, low=None):
+    def set_write_buffer_limits(
+        self, high: Optional[int] = None, low: Optional[int] = None
+    ) -> None:
         self._chan.set_write_buffer_limits(high=high, low=low)
-
 
 
 async def serve_ssh(handlers: list, host: str = "127.0.0.1", port: int = 8022) -> None:
@@ -126,7 +111,7 @@ async def serve_ssh(handlers: list, host: str = "127.0.0.1", port: int = 8022) -
 
 class SshChannel(client.Channel):
 
-    def __init__(self, reader, writer, **kwargs):
+    def __init__(self, reader: Any, writer: Any, **kwargs: Any):
         super().__init__(host="ssh", port=0, **kwargs)
         self._ssh_reader = reader
         self._ssh_writer = writer

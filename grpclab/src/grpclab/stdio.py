@@ -1,12 +1,13 @@
 import asyncio
 import contextlib
 import sys
-from typing import Optional
+from typing import Any, Optional
 
 from grpclib.protocol import H2Protocol
 from grpclib import client
 
 from grpclab.protocol import (
+    BaseCustomTransport,
     pump,
     BUF_HIGH,
     BUF_LOW,
@@ -15,59 +16,12 @@ from grpclab.protocol import (
 )
 
 
-class StreamReaderWriterTransport(asyncio.Transport):
-
-    def __init__(self, reader, writer):
-        super().__init__()
-        self._reader = reader
-        self._writer = writer
-        self._protocol: Optional[asyncio.Protocol] = None
-        self._closing = False
-
-    def write(self, data: bytes) -> None:
-        self._writer.write(data)
-
-    def close(self) -> None:
-        self._closing = True
-        self._writer.close()
-
-    def is_closing(self) -> bool:
-        return self._closing
-
-    def get_extra_info(self, name, default=None):
-        return self._writer.get_extra_info(name, default)
-
-    def get_protocol(self):
-        return self._protocol
-
-    def set_protocol(self, protocol):
-        self._protocol = protocol
-
-    def abort(self):
-        self._closing = True
-        self._writer.close()
-
-    def can_write_eof(self):
-        return False
-
-    def write_eof(self):
-        pass
-
-    def pause_reading(self):
-        pass
-
-    def resume_reading(self):
-        pass
-
-
-class StdioTransport(asyncio.Transport):
+class StdioTransport(BaseCustomTransport):
 
     def __init__(self, reader: asyncio.StreamReader, writer: asyncio.StreamWriter):
         super().__init__()
         self._reader = reader
         self._writer = writer
-        self._protocol: Optional[asyncio.Protocol] = None
-        self._closing = False
 
         pipe_transport = writer.transport
         pipe_transport.set_write_buffer_limits(high=BUF_HIGH, low=BUF_LOW)
@@ -82,37 +36,21 @@ class StdioTransport(asyncio.Transport):
         self._closing = True
         self._writer.close()
 
-    def is_closing(self) -> bool:
-        return self._closing
-
-    def get_extra_info(self, name, default=None):
+    def get_extra_info(self, name: str, default: Any = None) -> Any:
         return self._writer.get_extra_info(name, default)
 
-    def get_protocol(self):
-        return self._protocol
-
-    def set_protocol(self, protocol):
-        self._protocol = protocol
-
-    def abort(self):
+    def abort(self) -> None:
         self._closing = True
         self._writer.close()
 
-    def can_write_eof(self):
+    def can_write_eof(self) -> bool:
         return False
 
-    def write_eof(self):
-        pass
-
-    def pause_reading(self):
-        pass
-
-    def resume_reading(self):
+    def write_eof(self) -> None:
         pass
 
 
-
-async def _stdio_streams():
+async def _stdio_streams() -> tuple[asyncio.StreamReader, asyncio.StreamWriter, StdioTransport]:
     loop = asyncio.get_running_loop()
     reader = asyncio.StreamReader()
     await loop.connect_read_pipe(
@@ -123,10 +61,10 @@ async def _stdio_streams():
     transport_ref: list[StdioTransport] = []
 
     class _Bridge(asyncio.Protocol):
-        def pause_writing(self):
+        def pause_writing(self) -> None:
             if transport_ref and transport_ref[0]._protocol:
                 transport_ref[0]._protocol.pause_writing()
-        def resume_writing(self):
+        def resume_writing(self) -> None:
             if transport_ref and transport_ref[0]._protocol:
                 transport_ref[0]._protocol.resume_writing()
 
@@ -160,11 +98,11 @@ class StdioChannel(client.Channel):
 
     def __init__(
         self,
-        reader,
-        writer,
+        reader: Any,
+        writer: Any,
         *,
         transport: Optional[StdioTransport] = None,
-        **kwargs,
+        **kwargs: Any,
     ):
         super().__init__(host="stdio", port=0, **kwargs)
         self._stdio_reader = reader
@@ -173,10 +111,9 @@ class StdioChannel(client.Channel):
 
     async def _create_connection(self) -> H2Protocol:
         protocol = self._protocol_factory()
-        if self._stdio_transport is not None:
-            transport = self._stdio_transport
-        else:
-            transport = StreamReaderWriterTransport(self._stdio_reader, self._stdio_writer)
+        transport = self._stdio_transport or StdioTransport(
+            self._stdio_reader, self._stdio_writer
+        )
         protocol.connection_made(transport)
         asyncio.create_task(pump(protocol, self._stdio_reader))
         return protocol

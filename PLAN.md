@@ -61,7 +61,16 @@ pre-specialisation stepping stone.
   base — those are transport-specific.
 - `_protocol` field should be on the base class.
 
-**Status**: pending
+**Status**: done — Extracted `BaseCustomTransport(asyncio.Transport)` into
+`protocol.py` with shared `is_closing`, `get_protocol`/`set_protocol`,
+`pause_reading`/`resume_reading`, and the `_protocol`/`_closing` fields.
+Removed `StreamReaderWriterTransport` entirely. `StdioTransport` and
+`SshTransport` now subclass `BaseCustomTransport` and override only their
+specific methods. `StdioChannel._create_connection` no longer has the
+fallback branch — it always creates a `StdioTransport` using the reader/
+writer. Added proper type annotations to transport methods, channels, and
+`serve_stdio`/`serve_ssh` params. Tasks 2 and 3 combined since the rewrite
+naturally handled both.
 
 ---
 

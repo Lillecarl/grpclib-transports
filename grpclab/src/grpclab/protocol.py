@@ -1,3 +1,4 @@
+import asyncio
 from typing import Any, Mapping, Sequence
 
 from h2.config import H2Configuration
@@ -13,6 +14,41 @@ from grpclib._typing import IServable
 BUF_HIGH = pow(2, 19)  # 512 KiB — high watermark for write buffering
 BUF_LOW = pow(2, 18)   # 256 KiB — low watermark for write buffering
 READ_CHUNK = pow(2, 19)  # 512 KiB — read chunk size for pump()
+
+
+class BaseCustomTransport(asyncio.Transport):
+    """Base class for custom asyncio transports that wrap a reader/writer pair.
+
+    Concrete transports (StdioTransport, SshTransport) override:
+    - ``write()``         — forward data to the underlying writer
+    - ``get_extra_info()`` — delegate to the appropriate underlying object
+    - ``get_write_buffer_size()`` — introspect the write buffer (for flow control)
+    - ``abort()``         — hard reset (transport-specific)
+    - ``can_write_eof()`` / ``write_eof()`` — EOF support (transport-specific)
+
+    Flow-control bridging (pause_writing/resume_writing forwarding to the
+    H2Protocol) is handled by each concrete transport's own mechanism.
+    """
+
+    def __init__(self) -> None:
+        super().__init__()
+        self._protocol: H2Protocol | None = None
+        self._closing = False
+
+    def is_closing(self) -> bool:
+        return self._closing
+
+    def get_protocol(self) -> H2Protocol | None:
+        return self._protocol
+
+    def set_protocol(self, protocol: H2Protocol) -> None:
+        self._protocol = protocol
+
+    def pause_reading(self) -> None:
+        pass
+
+    def resume_reading(self) -> None:
+        pass
 
 
 async def pump(protocol: H2Protocol, reader: Any) -> None:
