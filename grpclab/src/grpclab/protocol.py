@@ -119,6 +119,7 @@ def install_h2_fast_receive_patch() -> None:
 install_h2_fast_receive_patch()
 
 MAX_FRAME_SIZE = 2**24 - 1
+DEFAULT_HTTP2_MAX_FRAME_SIZE = 1024 * 1024
 
 
 @dataclass(frozen=True)
@@ -142,6 +143,14 @@ class TransportTuning:
             "GRPCLAB_HTTP2_CONNECTION_WINDOW_SIZE",
             max(64 * 1024 * 1024, stream_window_size * 4),
         )
+        max_frame_size = _env_size(
+            "GRPCLAB_HTTP2_MAX_FRAME_SIZE",
+            min(DEFAULT_HTTP2_MAX_FRAME_SIZE, buffer_size, MAX_FRAME_SIZE),
+        )
+        if max_frame_size > MAX_FRAME_SIZE:
+            raise ValueError(
+                "GRPCLAB_HTTP2_MAX_FRAME_SIZE exceeds HTTP/2 maximum frame size"
+            )
         return cls(
             buffer_size=buffer_size,
             read_chunk_size=buffer_size,
@@ -149,7 +158,7 @@ class TransportTuning:
             write_low_water=buffer_size // 2,
             http2_stream_window_size=stream_window_size,
             http2_connection_window_size=connection_window_size,
-            http2_max_frame_size=min(buffer_size, MAX_FRAME_SIZE),
+            http2_max_frame_size=max_frame_size,
         )
 
 
