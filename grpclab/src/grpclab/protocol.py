@@ -52,16 +52,17 @@ class BaseCustomTransport(asyncio.Transport):
 
 
 async def pump(protocol: H2Protocol, reader: Any) -> None:
+    exc: BaseException | None = None
     try:
         while True:
             data = await reader.read(READ_CHUNK)
             if not data:
                 break
             protocol.data_received(data)
-    except (ConnectionError, OSError):
-        pass
+    except (ConnectionError, OSError) as e:
+        exc = e
     finally:
-        protocol.connection_lost(None)
+        protocol.connection_lost(exc)
 
 
 def make_h2_config(*, client_side: bool) -> H2Configuration:

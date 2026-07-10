@@ -115,7 +115,9 @@ processor log or clean up streams. Also remove the `EOFError` catch —
 - Use `BaseException` (like grpclib's own signature) or `Optional[BaseException]`.
 - The broad `except (ConnectionError, EOFError, OSError)` should drop `EOFError`.
 
-**Status**: pending
+**Status**: done — `pump` now captures the exception from `ConnectionError`/
+`OSError` and passes it to `protocol.connection_lost(exc)` instead of always
+`None`. The dead `EOFError` catch was already removed in Task 1.
 
 ---
 
