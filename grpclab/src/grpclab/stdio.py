@@ -16,7 +16,9 @@ from grpclab.protocol import (
     init_h2_transport,
     make_config,
     make_server_protocol,
+    pause_h2_protocol,
     pump,
+    resume_h2_protocol,
 )
 
 
@@ -80,11 +82,11 @@ async def _stdio_streams(
 
     class _Bridge(asyncio.Protocol):
         def pause_writing(self) -> None:
-            if transport_ref and transport_ref[0]._protocol:
-                transport_ref[0]._protocol.pause_writing()
+            if transport_ref:
+                pause_h2_protocol(transport_ref[0]._protocol)
         def resume_writing(self) -> None:
-            if transport_ref and transport_ref[0]._protocol:
-                transport_ref[0]._protocol.resume_writing()
+            if transport_ref:
+                resume_h2_protocol(transport_ref[0]._protocol)
 
     t, proto = await loop.connect_write_pipe(
         lambda: _Bridge(),

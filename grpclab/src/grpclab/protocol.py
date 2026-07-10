@@ -163,6 +163,16 @@ class BaseCustomTransport(asyncio.Transport):
         pass
 
 
+def pause_h2_protocol(protocol: asyncio.BaseProtocol | None) -> None:
+    if protocol is not None:
+        protocol.pause_writing()
+
+
+def resume_h2_protocol(protocol: asyncio.BaseProtocol | None) -> None:
+    if protocol is not None:
+        protocol.resume_writing()
+
+
 async def pump(
     protocol: H2Protocol,
     reader: Any,

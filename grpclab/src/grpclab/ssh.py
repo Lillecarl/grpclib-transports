@@ -16,7 +16,9 @@ from grpclab.protocol import (
     init_h2_transport,
     make_config,
     make_server_protocol,
+    pause_h2_protocol,
     pump,
+    resume_h2_protocol,
     signal_stop,
 )
 
@@ -59,14 +61,12 @@ class SshTransport(BaseCustomTransport):
     def _on_pause_writing(self) -> None:
         if self._orig_pause_writing is not None:
             self._orig_pause_writing()
-        if self._protocol is not None:
-            self._protocol.pause_writing()
+        pause_h2_protocol(self._protocol)
 
     def _on_resume_writing(self) -> None:
         if self._orig_resume_writing is not None:
             self._orig_resume_writing()
-        if self._protocol is not None:
-            self._protocol.resume_writing()
+        resume_h2_protocol(self._protocol)
 
     def write(self, data: bytes | bytearray | memoryview) -> None:
         self._writer.write(data)
