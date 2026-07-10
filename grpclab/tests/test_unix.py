@@ -1,12 +1,12 @@
 import asyncio
+import contextlib
 import tempfile
-import os
-import socket
+from pathlib import Path
 
 from demo import demo_grpc, demo_pb2
 from grpclab.example.server import Greeter
-from grpclib.server import Server
 from grpclib.client import Channel
+from grpclib.server import Server
 
 
 def test_unix_socket():
@@ -28,7 +28,5 @@ def test_unix_socket():
     try:
         asyncio.run(run())
     finally:
-        try:
-            os.unlink(sock_path)
-        except OSError:
-            pass
+        with contextlib.suppress(OSError):
+            Path(sock_path).unlink()

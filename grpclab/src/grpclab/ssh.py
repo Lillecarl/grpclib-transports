@@ -1,18 +1,17 @@
 import asyncio
 import signal
-import sys
-from typing import Any, Optional
+from typing import Any
 
-from grpclib.protocol import H2Protocol
 from grpclib import client
+from grpclib.protocol import H2Protocol
 
 from grpclab.protocol import (
-    BaseCustomTransport,
-    pump,
     BUF_HIGH,
     BUF_LOW,
-    make_server_protocol,
+    BaseCustomTransport,
     build_mapping,
+    make_server_protocol,
+    pump,
     signal_stop,
 )
 
@@ -80,7 +79,7 @@ class SshTransport(BaseCustomTransport):
         self._writer.write_eof()
 
     def set_write_buffer_limits(
-        self, high: Optional[int] = None, low: Optional[int] = None
+        self, high: int | None = None, low: int | None = None
     ) -> None:
         self._chan.set_write_buffer_limits(high=high, low=low)
 
@@ -106,7 +105,6 @@ async def serve_ssh(handlers: list, host: str = "127.0.0.1", port: int = 8022) -
         protocol.connection_made(transport)
         transport._protocol = protocol
 
-        print("[ssh-server] gRPC session started", file=sys.stderr)
         await pump(protocol, stdin)
 
     acceptor = await asyncssh.create_server(
@@ -117,7 +115,6 @@ async def serve_ssh(handlers: list, host: str = "127.0.0.1", port: int = 8022) -
         process_factory=session_handler,
         encoding=None,
     )
-    print(f"[ssh-server] listening on {host}:{port}", file=sys.stderr)
 
     loop = asyncio.get_running_loop()
     stop = loop.create_future()

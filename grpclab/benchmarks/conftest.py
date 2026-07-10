@@ -1,9 +1,12 @@
+from __future__ import annotations
+
 import asyncio
+import io
 import os
 import re
 import time
 import traceback
-import io
+from pathlib import Path
 
 from demo import demo_grpc, demo_pb2
 
@@ -13,8 +16,8 @@ LARGE_SIZE = 1024 * 1024
 SMALL_PAYLOAD = b""
 LARGE_PAYLOAD = os.urandom(LARGE_SIZE)
 
-DUMP_DIR = os.path.join(os.getcwd(), ".bench-dumps")
-os.makedirs(DUMP_DIR, exist_ok=True)
+DUMP_DIR = Path.cwd() / ".bench-dumps"
+DUMP_DIR.mkdir(parents=True, exist_ok=True)
 
 TIMEOUT = 30
 
@@ -26,11 +29,8 @@ def _report(label, count, elapsed, payload_size):
     msgs_per_sec = count / elapsed
     total_bytes = count * payload_size
     mb_per_sec = total_bytes / elapsed / (1024 * 1024)
-    print(f"\n  {label}:")
-    print(f"    {count} msgs in {elapsed:.3f}s")
-    print(f"    {msgs_per_sec:.0f} msgs/s  ({payload_size} B/msg)")
     if payload_size:
-        print(f"    {mb_per_sec:.2f} MB/s")
+        pass
 
     m = re.match(r"(\w+) \((\w+), p=(\d+)\)", label)
     if m:
@@ -49,7 +49,7 @@ def _report(label, count, elapsed, payload_size):
 def _dump_tasks(label: str, loop: asyncio.AbstractEventLoop) -> str:
     """Dump all asyncio task stacks to a file, return the file path."""
     safe = re.sub(r"[^\w.]", "_", label)
-    path = os.path.join(DUMP_DIR, f"{safe}_tasks.txt")
+    path = DUMP_DIR / f"{safe}_tasks.txt"
     buf = io.StringIO()
     buf.write(f"=== Task stack dump for '{label}' at {time.strftime('%Y-%m-%d %H:%M:%S')} ===\n\n")
     tasks = asyncio.all_tasks(loop)
@@ -59,24 +59,22 @@ def _dump_tasks(label: str, loop: asyncio.AbstractEventLoop) -> str:
         task.print_stack(file=buf)
         buf.write("\n")
     content = buf.getvalue()
-    with open(path, "w") as f:
+    with path.open("w") as f:
         f.write(content)
     # Print a brief summary to stderr/stdout
-    print(f"\n  [{label}] Task stack dump written to: {path}")
     # Print the first 60 lines inline so it shows up in -s mode
-    for line in content.splitlines()[:60]:
-        print(f"    {line}")
+    for _line in content.splitlines()[:60]:
+        pass
     _dump_paths.append(path)
     return path
 
 
-def _dump_profile(label: str, pathToTimeline: str) -> str:
+def _dump_profile(label: str, path_to_timeline: str) -> str:
     """Write the pyinstrument pathToTimeline to a text file, return the file path."""
     safe = re.sub(r"[^\w.]", "_", label)
-    path = os.path.join(DUMP_DIR, f"{safe}_profile.txt")
-    with open(path, "w") as f:
-        f.write(pathToTimeline)
-    print(f"\n  [{label}] Pyinstrument profile written to: {path}")
+    path = DUMP_DIR / f"{safe}_profile.txt"
+    with path.open("w") as f:
+        f.write(path_to_timeline)
     _dump_paths.append(path)
     return path
 
@@ -125,7 +123,6 @@ async def _runner_with_timeout(coro, label, loop):
     def _on_timeout():
         nonlocal timed_out
         timed_out = True
-        print(f"\n  [{label}] TIMEOUT after {TIMEOUT}s — dumping task stacks")
         _dump_tasks(label, loop)
         main_task.cancel()
 
@@ -134,7 +131,7 @@ async def _runner_with_timeout(coro, label, loop):
         await main_task
     except asyncio.CancelledError:
         if timed_out:
-            raise asyncio.TimeoutError()
+            raise TimeoutError from None
         raise
     finally:
         timer.cancel()
@@ -164,19 +161,18 @@ def _run_with_dump(label, coro_factory):
 
     try:
         loop.run_until_complete(wrapper)
-    except asyncio.TimeoutError:
+    except TimeoutError:
         pass  # already dumped tasks in _on_timeout
-    except Exception as e:
-        print(f"\n  [{label}] ERROR: {e}")
+    except Exception:
         traceback.print_exc()
         _dump_tasks(label, loop)
     finally:
         profiler.stop()
         try:
-            profileText = profiler.output_text(unicode=True, color=False, show_all=True)
+            profile_text = profiler.output_text(unicode=True, color=False, show_all=True)
         except Exception:
-            profileText = "Failed to generate pyinstrument text output"
-        _dump_profile(label, profileText)
+            profile_text = "Failed to generate pyinstrument text output"
+        _dump_profile(label, profile_text)
 
         # Cancel any remaining tasks
         pending = asyncio.all_tasks(loop)
@@ -203,7 +199,7 @@ def _fmt_mb(v: float) -> str:
     return f"{v:>10.2f} MB/s"
 
 
-def pytest_terminal_summary(terminalreporter, exitstatus, config):
+def pytest_terminal_summary(terminalreporter, _exitstatus, _config):
     if not _bench_results:
         # Even if no results, print dump paths if we have them
         if _dump_paths:

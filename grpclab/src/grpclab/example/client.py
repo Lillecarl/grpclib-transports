@@ -1,19 +1,16 @@
-import sys
 from typing import Any
 
+from demo import demo_grpc, demo_pb2
 from grpclib.client import Channel
-from demo import demo_pb2, demo_grpc
 
-from grpclab.stdio import StdioChannel, _stdio_streams
 from grpclab.ssh import SshChannel
+from grpclab.stdio import StdioChannel, _stdio_streams
 
 
 async def greet(channel: Any, name: str = "World") -> None:
     stub = demo_grpc.GreeterStub(channel)
     request = demo_pb2.HelloRequest(name=name)
-    print(f"[client] sending: SayHello(name={request.name!r})", file=sys.stderr)
-    response = await stub.SayHello(request)
-    print(f"[client] received: {response.message}", file=sys.stderr)
+    await stub.SayHello(request)
 
 
 async def greet_unix(path: str, name: str = "World") -> None:
@@ -46,7 +43,7 @@ async def greet_ssh(
         password=password,
         known_hosts=None,
     ) as conn:
-        stdin, stdout, stderr = await conn.open_session(encoding=None)
+        stdin, stdout, _stderr = await conn.open_session(encoding=None)
         channel = SshChannel(stdout, stdin)
         try:
             await greet(channel, name)

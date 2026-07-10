@@ -320,4 +320,30 @@ importing these packages.
 - Don't fix tempfile.mktemp in tests — it's harmless in tests and
   over-scoped for this pass.
 
-**Status**: pending
+**Status**: done — Most minor issues were fixed by the Task 10 rewrite:
+- `__import__("sys").stderr` replaced with proper `import sys` at top.
+- Late `from demo import ...` inside `greet_ssh` moved to top-level in
+  `example/client.py`.
+- `_make_server_protocol` / `_make_h2_config` underscore-prefixed functions
+  replaced with public `make_server_protocol` / `make_h2_config` in
+  `protocol.py`.
+- `tempfile.mktemp` in tests left as-is (harmless in tests, out of scope).
+
+---
+
+## Summary of all changes
+
+| Task | Description | Status |
+|------|-------------|--------|
+| 1 | Consolidate shared helpers into protocol.py | done |
+| 2 | Extract BaseCustomTransport, remove StreamReaderWriterTransport | done |
+| 3 | Type transports properly | done (with Task 2) |
+| 4 | Fix pump to pass exceptions and remove dead catch | done |
+| 5 | Fix channel lifecycle: cancel pump task, close writer on close | done |
+| 6 | Fix abort to be a real hard reset | done (SSH was already correct) |
+| 7 | Restore asyncssh session callbacks on close/abort | done |
+| 8 | Add graceful shutdown to serve_ssh | done |
+| 9 | Guard signal handler against double-fire | done |
+| 10 | Split library from demo, define public API, unify greet | done |
+| 11 | Declare dependencies in pyproject.toml | done |
+| 12 | Clean up minor issues | done (mostly via Task 10) |

@@ -1,20 +1,21 @@
+from __future__ import annotations
+
 import asyncio
 import signal
-import sys
+import typing
 
+from demo import demo_grpc, demo_pb2
 from grpclib.server import Server
-from demo import demo_pb2, demo_grpc
 
 from grpclab.protocol import signal_stop
 
 
 class Greeter(demo_grpc.GreeterBase):
 
+    @typing.override
     async def SayHello(self, stream):
         request = await stream.recv_message()
-        print(f"[server] received: SayHello(name={request.name!r})", file=sys.stderr)
         reply = demo_pb2.HelloReply(message=f"Hello, {request.name}!")
-        print(f"[server] sending: {reply.message}", file=sys.stderr)
         await stream.send_message(reply)
 
 
@@ -22,7 +23,6 @@ async def serve(path: str) -> None:
     loop = asyncio.get_running_loop()
     server = Server([Greeter()])
     await server.start(path=path)
-    print(f"[server] listening on {path}")
 
     stop = loop.create_future()
     for sig in (signal.SIGINT, signal.SIGTERM):

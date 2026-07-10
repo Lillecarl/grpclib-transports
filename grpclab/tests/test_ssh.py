@@ -1,13 +1,14 @@
 import asyncio
+import contextlib
 import socket
 import tempfile
-import os
+from pathlib import Path
 
 import asyncssh
 from demo import demo_grpc, demo_pb2
 from grpclab.example.server import Greeter
-from grpclab.ssh import SshTransport, SshChannel
-from grpclab.protocol import pump, make_server_protocol, build_mapping
+from grpclab.protocol import build_mapping, make_server_protocol, pump
+from grpclab.ssh import SshChannel, SshTransport
 
 
 class _TestSSHServer(asyncssh.SSHServer):
@@ -53,7 +54,7 @@ def test_ssh_transport():
                 password="test",
             )
             try:
-                stdin, stdout, stderr = await conn.open_session(
+                stdin, stdout, _stderr = await conn.open_session(
                     encoding=None
                 )
 
@@ -74,7 +75,5 @@ def test_ssh_transport():
     try:
         asyncio.run(run())
     finally:
-        try:
-            os.unlink(sock_path)
-        except OSError:
-            pass
+        with contextlib.suppress(OSError):
+            Path(sock_path).unlink()

@@ -4,6 +4,7 @@
   hatchling,
   proto,
   asyncssh,
+  anyio,
   pytestCheckHook,
 }:
 buildPythonApplication {
@@ -18,6 +19,7 @@ buildPythonApplication {
   dependencies = [
     proto
     asyncssh
+    anyio
   ];
 
   nativeCheckInputs = [

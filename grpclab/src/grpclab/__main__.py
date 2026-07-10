@@ -1,20 +1,17 @@
-import asyncio
 import argparse
-import sys
+import asyncio
 
 from grpclib.server import Server
 
-from grpclab.stdio import serve_stdio
-from grpclab.ssh import serve_ssh
-
+from grpclab.example.client import greet_ssh, greet_stdio, greet_unix
 from grpclab.example.server import Greeter, serve
-from grpclab.example.client import greet_unix, greet_stdio, greet_ssh
+from grpclab.ssh import serve_ssh
+from grpclab.stdio import serve_stdio
 
 
 async def run_internal(path: str) -> None:
     server = Server([Greeter()])
     await server.start(path=path)
-    print(f"[internal] server listening on {path}")
     try:
         await greet_unix(path)
     finally:

@@ -1,15 +1,15 @@
 import asyncio
-from typing import Any, Mapping, Sequence
+from collections.abc import Mapping, Sequence
+from typing import Any
 
-from h2.config import H2Configuration
+from grpclib._typing import IServable
 from grpclib.config import Configuration
 from grpclib.const import Handler
 from grpclib.encoding.proto import ProtoCodec
 from grpclib.events import _DispatchServerEvents
 from grpclib.protocol import H2Protocol
 from grpclib.server import Handler as ServerHandler
-from grpclib._typing import IServable
-
+from h2.config import H2Configuration
 
 BUF_HIGH = pow(2, 19)  # 512 KiB — high watermark for write buffering
 BUF_LOW = pow(2, 18)   # 256 KiB — low watermark for write buffering

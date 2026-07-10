@@ -1,13 +1,12 @@
-import os
+import contextlib
 import tempfile
 
+import anyio
 import pytest
-
-from conftest import SMALL_PAYLOAD, LARGE_PAYLOAD, SMALL_COUNT, LARGE_COUNT, _bench, _run
-
+from conftest import LARGE_COUNT, LARGE_PAYLOAD, SMALL_COUNT, SMALL_PAYLOAD, _bench, _run
 from grpclab.example.server import Greeter
-from grpclib.server import Server as GrpcServer
 from grpclib.client import Channel
+from grpclib.server import Server as GrpcServer
 
 
 @pytest.mark.parametrize("parallelism", [1, 2, 4, 8])
@@ -24,8 +23,6 @@ def test_unix(parallelism):
         finally:
             server.close()
             await server.wait_closed()
-            try:
-                os.unlink(sock)
-            except OSError:
-                pass
+            with contextlib.suppress(OSError):
+                await anyio.Path(sock).unlink()
     _run(f"unix (p={parallelism})", run())

@@ -1,0 +1,24 @@
+target-version = "py313"
+line-length = 120
+
+[lint]
+select = [
+    "E", "W",  # pycodestyle
+    "F",       # pyflakes (real bugs)
+    "I",       # isort
+]
+
+ignore = [
+    "E501",  # line length handled by line-length setting
+]
+
+[lint.isort]
+known-first-party = [
+    "nanopynix",
+    "nanopynix_expr",
+    "nanopynix_fetchers",
+    "nanopynix_flake",
+    "nanopynix_main",
+    "nanopynix_store",
+    "nanopynix_util",
+]

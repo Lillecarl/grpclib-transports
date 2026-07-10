@@ -1,15 +1,14 @@
-import os
+import contextlib
 import socket
 import tempfile
 
+import anyio
 import asyncssh
 import pytest
-
-from conftest import SMALL_PAYLOAD, LARGE_PAYLOAD, SMALL_COUNT, LARGE_COUNT, _bench, _run
-
+from conftest import LARGE_COUNT, LARGE_PAYLOAD, SMALL_COUNT, SMALL_PAYLOAD, _bench, _run
 from grpclab.example.server import Greeter
-from grpclab.protocol import pump, make_server_protocol, build_mapping
-from grpclab.ssh import SshTransport, SshChannel
+from grpclab.protocol import build_mapping, make_server_protocol, pump
+from grpclab.ssh import SshChannel, SshTransport
 
 
 @pytest.mark.parametrize("parallelism", [1, 2, 4, 8])
@@ -54,8 +53,6 @@ def test_ssh(parallelism):
         finally:
             acceptor.close()
             await acceptor.wait_closed()
-            try:
-                os.unlink(sock)
-            except OSError:
-                pass
+            with contextlib.suppress(OSError):
+                await anyio.Path(sock).unlink()
     _run(f"ssh (p={parallelism})", run())

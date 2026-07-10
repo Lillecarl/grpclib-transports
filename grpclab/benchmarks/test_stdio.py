@@ -2,9 +2,7 @@ import asyncio
 import sys
 
 import pytest
-
-from conftest import SMALL_PAYLOAD, LARGE_PAYLOAD, SMALL_COUNT, LARGE_COUNT, _bench, _run
-
+from conftest import LARGE_COUNT, LARGE_PAYLOAD, SMALL_COUNT, SMALL_PAYLOAD, _bench, _run
 from grpclab.stdio import StdioChannel
 
 
@@ -26,5 +24,5 @@ def test_stdio(parallelism):
             proc.kill()
             serr = await asyncio.wait_for(proc.stderr.read(), timeout=3)
             if serr:
-                print(f"  [server stderr] {serr.decode()[:200]}")
+                pass
     _run(f"stdio (p={parallelism})", run())

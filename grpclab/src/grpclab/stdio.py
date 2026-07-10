@@ -1,18 +1,18 @@
 import asyncio
 import contextlib
 import sys
-from typing import Any, Optional
+from typing import Any
 
-from grpclib.protocol import H2Protocol
 from grpclib import client
+from grpclib.protocol import H2Protocol
 
 from grpclab.protocol import (
-    BaseCustomTransport,
-    pump,
     BUF_HIGH,
     BUF_LOW,
-    make_server_protocol,
+    BaseCustomTransport,
     build_mapping,
+    make_server_protocol,
+    pump,
 )
 
 
@@ -84,13 +84,12 @@ async def _stdio_streams() -> tuple[asyncio.StreamReader, asyncio.StreamWriter, 
 async def serve_stdio(handlers: list) -> None:
     mapping = build_mapping(handlers)
 
-    reader, writer, transport = await _stdio_streams()
+    reader, _writer, transport = await _stdio_streams()
 
     protocol = make_server_protocol(mapping)
     protocol.connection_made(transport)
     transport._protocol = protocol
 
-    print("[server] running on stdin/stdout", file=sys.stderr)
     with contextlib.redirect_stdout(sys.stderr):
         await pump(protocol, reader)
 
@@ -102,7 +101,7 @@ class StdioChannel(client.Channel):
         reader: Any,
         writer: Any,
         *,
-        transport: Optional[StdioTransport] = None,
+        transport: StdioTransport | None = None,
         **kwargs: Any,
     ):
         super().__init__(host="stdio", port=0, **kwargs)
