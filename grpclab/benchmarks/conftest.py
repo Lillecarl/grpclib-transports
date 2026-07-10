@@ -4,18 +4,15 @@ import asyncio
 import contextlib
 import fcntl
 import io
-import logging
 import os
 import re
 import time
 import traceback
 from pathlib import Path
 
+import grpclab._logging  # noqa: F401
 from demo import demo_grpc, demo_pb2
 from grpclab.protocol import MAX_BUF
-
-logging.getLogger("h2").setLevel(logging.WARNING)
-logging.getLogger("asyncssh").setLevel(logging.WARNING)
 
 
 def _bump_pipe_buf(proc: asyncio.subprocess.Process) -> None:
@@ -182,10 +179,11 @@ def _run_with_dump(label, coro_factory):
     try:
         loop.run_until_complete(wrapper)
     except TimeoutError:
-        pass  # already dumped tasks in _on_timeout
+        raise  # already dumped tasks in _on_timeout
     except Exception:
         traceback.print_exc()
         _dump_tasks(label, loop)
+        raise
     finally:
         profiler.stop()
         try:

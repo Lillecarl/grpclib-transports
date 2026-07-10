@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import asyncio
 import contextlib
 import sys
@@ -12,6 +14,7 @@ from grpclab.protocol import (
     BaseCustomTransport,
     build_mapping,
     init_server_protocol,
+    make_config,
     make_server_protocol,
     pump,
 )
@@ -104,6 +107,7 @@ class StdioChannel(client.Channel):
         transport: StdioTransport | None = None,
         **kwargs: Any,
     ):
+        kwargs.setdefault("config", make_config())
         super().__init__(host="stdio", port=0, **kwargs)
         self._stdio_reader = reader
         self._stdio_writer = writer

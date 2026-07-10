@@ -1,4 +1,7 @@
+from __future__ import annotations
+
 import asyncio
+import os
 from collections.abc import Sequence
 from typing import Any
 
@@ -10,12 +13,70 @@ from grpclib.events import _DispatchServerEvents
 from grpclib.protocol import H2Protocol
 from grpclib.server import Handler as ServerHandler
 from h2.config import H2Configuration
+from h2.connection import H2Connection
+from h2.errors import ErrorCodes
+from h2.exceptions import StreamClosedError, StreamIDTooLowError
 from h2.settings import SettingCodes
+from hyperframe.frame import RstStreamFrame
 
-MAX_BUF = pow(2, 20)  # 1 MiB — unified buffer size
+
+def _env_size(name: str, default: int) -> int:
+    raw = os.environ.get(name)
+    if raw is None:
+        return default
+    try:
+        value = int(raw)
+    except ValueError as e:
+        raise ValueError(f"{name} must be an integer byte count") from e
+    if value <= 0:
+        raise ValueError(f"{name} must be positive")
+    return value
+
+
+def _receive_frame(self: H2Connection, frame: Any) -> list[Any]:
+    events: list
+    try:
+        frames, events = self._frame_dispatch_table[frame.__class__](frame)
+    except StreamClosedError as e:
+        if self._stream_is_closed_by_reset(e.stream_id):
+            f = RstStreamFrame(e.stream_id)
+            f.error_code = e.error_code
+            self._prepare_for_sending([f])
+            events = e._events
+        else:
+            raise
+    except StreamIDTooLowError as e:
+        if self._stream_is_closed_by_reset(e.stream_id):
+            f = RstStreamFrame(e.stream_id)
+            f.error_code = ErrorCodes.STREAM_CLOSED
+            self._prepare_for_sending([f])
+            events = []
+        elif self._stream_is_closed_by_end(e.stream_id):
+            raise StreamClosedError(e.stream_id) from e
+        else:
+            raise
+    else:
+        self._prepare_for_sending(frames)
+    return events
+
+
+H2Connection._receive_frame = _receive_frame
+
+MAX_FRAME_SIZE = 2**24 - 1
+
+MAX_BUF = _env_size("GRPCLAB_BUFFER_SIZE", 8 * 1024 * 1024)
 BUF_HIGH = MAX_BUF
 BUF_LOW = MAX_BUF // 2
 READ_CHUNK = MAX_BUF
+HTTP2_STREAM_WINDOW_SIZE = _env_size(
+    "GRPCLAB_HTTP2_STREAM_WINDOW_SIZE",
+    max(16 * 1024 * 1024, MAX_BUF * 2),
+)
+HTTP2_CONNECTION_WINDOW_SIZE = _env_size(
+    "GRPCLAB_HTTP2_CONNECTION_WINDOW_SIZE",
+    max(64 * 1024 * 1024, HTTP2_STREAM_WINDOW_SIZE * 4),
+)
+HTTP2_MAX_FRAME_SIZE = min(MAX_BUF, MAX_FRAME_SIZE)
 
 
 class BaseCustomTransport(asyncio.Transport):
@@ -81,18 +142,27 @@ def make_h2_config(*, client_side: bool) -> H2Configuration:
     )
 
 
+def make_config() -> Configuration:
+    return Configuration(
+        http2_connection_window_size=HTTP2_CONNECTION_WINDOW_SIZE,
+        http2_stream_window_size=HTTP2_STREAM_WINDOW_SIZE,
+    )
+
+
 def make_server_protocol(mapping: dict[str, Handler]) -> H2Protocol:
-    config = Configuration().__for_server__()
+    config = make_config().__for_server__()
     h2_config = make_h2_config(client_side=False)
     handler = ServerHandler(mapping, ProtoCodec(), None, _DispatchServerEvents())
     return H2Protocol(handler, config, h2_config)
 
 
 def init_server_protocol(protocol: H2Protocol, transport: Any) -> None:
+    transport.set_protocol(protocol)
     protocol.connection_made(transport)
     protocol.connection._connection.update_settings({
-        SettingCodes.MAX_FRAME_SIZE: MAX_BUF,
+        SettingCodes.MAX_FRAME_SIZE: HTTP2_MAX_FRAME_SIZE,
     })
+    protocol.connection.flush()
 
 
 def build_mapping(handlers: Sequence[IServable]) -> dict[str, Handler]:

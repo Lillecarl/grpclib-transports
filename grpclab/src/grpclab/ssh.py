@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import asyncio
 import signal
 from typing import Any
@@ -11,6 +13,7 @@ from grpclab.protocol import (
     BaseCustomTransport,
     build_mapping,
     init_server_protocol,
+    make_config,
     make_server_protocol,
     pump,
     signal_stop,
@@ -130,6 +133,7 @@ async def serve_ssh(handlers: list, host: str = "127.0.0.1", port: int = 8022) -
 class SshChannel(client.Channel):
 
     def __init__(self, reader: Any, writer: Any, **kwargs: Any):
+        kwargs.setdefault("config", make_config())
         super().__init__(host="ssh", port=0, **kwargs)
         self._ssh_reader = reader
         self._ssh_writer = writer

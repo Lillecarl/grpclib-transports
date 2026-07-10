@@ -7,7 +7,7 @@ import typing
 from demo import demo_grpc, demo_pb2
 from grpclib.server import Server
 
-from grpclab.protocol import signal_stop
+from grpclab.protocol import make_config, signal_stop
 
 
 class Greeter(demo_grpc.GreeterBase):
@@ -23,7 +23,7 @@ class Greeter(demo_grpc.GreeterBase):
 
 async def serve(path: str) -> None:
     loop = asyncio.get_running_loop()
-    server = Server([Greeter()])
+    server = Server([Greeter()], config=make_config())
     await server.start(path=path)
 
     stop = loop.create_future()

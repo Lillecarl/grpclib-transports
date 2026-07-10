@@ -1,8 +1,11 @@
+from __future__ import annotations
+
 from typing import Any
 
 from demo import demo_grpc, demo_pb2
 from grpclib.client import Channel
 
+from grpclab.protocol import make_config
 from grpclab.ssh import SshChannel
 from grpclab.stdio import StdioChannel, _stdio_streams
 
@@ -14,7 +17,7 @@ async def greet(channel: Any, name: str = "World") -> None:
 
 
 async def greet_unix(path: str, name: str = "World") -> None:
-    async with Channel(path=path) as channel:
+    async with Channel(path=path, config=make_config()) as channel:
         await greet(channel, name)
 
 
