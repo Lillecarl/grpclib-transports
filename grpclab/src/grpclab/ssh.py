@@ -26,11 +26,19 @@ class SshTransport(BaseCustomTransport):
         chan.set_write_buffer_limits(high=BUF_HIGH, low=BUF_LOW)
         self._chan = chan
 
-        session = writer._session
-        self._orig_pause_writing = session.pause_writing
-        self._orig_resume_writing = session.resume_writing
-        session.pause_writing = self._on_pause_writing
-        session.resume_writing = self._on_resume_writing
+        self._session = writer._session
+        self._orig_pause_writing = self._session.pause_writing
+        self._orig_resume_writing = self._session.resume_writing
+        self._session.pause_writing = self._on_pause_writing
+        self._session.resume_writing = self._on_resume_writing
+
+    def _restore_session_callbacks(self) -> None:
+        if self._orig_pause_writing is not None:
+            self._session.pause_writing = self._orig_pause_writing
+            self._orig_pause_writing = None
+        if self._orig_resume_writing is not None:
+            self._session.resume_writing = self._orig_resume_writing
+            self._orig_resume_writing = None
 
     def _on_pause_writing(self) -> None:
         self._orig_pause_writing()
@@ -50,6 +58,7 @@ class SshTransport(BaseCustomTransport):
 
     def close(self) -> None:
         self._closing = True
+        self._restore_session_callbacks()
         self._writer.close()
 
     def get_extra_info(self, name: str, default: Any = None) -> Any:
@@ -59,6 +68,7 @@ class SshTransport(BaseCustomTransport):
 
     def abort(self) -> None:
         self._closing = True
+        self._restore_session_callbacks()
         self._writer.abort()
 
     def can_write_eof(self) -> bool:

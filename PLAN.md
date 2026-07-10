@@ -183,7 +183,11 @@ restore them in `close()` / `abort()`.
   `close()` and `abort()`.
 - The flow-control forwarding is essential for backpressure; can't remove it.
 
-**Status**: pending
+**Status**: done — Added `_restore_session_callbacks()` to `SshTransport`
+that restores the original `pause_writing`/`resume_writing` on the asyncssh
+session. Called from both `close()` and `abort()`. The original callbacks
+are stored as `self._orig_pause_writing`/`self._orig_resume_writing` and
+set to `None` after restoration to prevent double-restore.
 
 ---
 
