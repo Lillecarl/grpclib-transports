@@ -8,9 +8,9 @@ from grpclib import client
 from grpclib.protocol import H2Protocol
 
 from grpclab.protocol import (
-    BUF_HIGH,
-    BUF_LOW,
+    DEFAULT_TUNING,
     BaseCustomTransport,
+    TransportTuning,
     build_mapping,
     init_server_protocol,
     make_config,
@@ -22,13 +22,23 @@ from grpclab.protocol import (
 
 class SshTransport(BaseCustomTransport):
 
-    def __init__(self, reader: Any, writer: Any):
+    def __init__(
+        self,
+        reader: Any,
+        writer: Any,
+        *,
+        tuning: TransportTuning = DEFAULT_TUNING,
+    ):
         super().__init__()
         self._reader = reader
         self._writer = writer
+        self._tuning = tuning
 
         chan = writer._chan
-        chan.set_write_buffer_limits(high=BUF_HIGH, low=BUF_LOW)
+        chan.set_write_buffer_limits(
+            high=tuning.write_high_water,
+            low=tuning.write_low_water,
+        )
         self._chan = chan
 
         self._session = writer._session
@@ -90,7 +100,13 @@ class SshTransport(BaseCustomTransport):
         self._chan.set_write_buffer_limits(high=high, low=low)
 
 
-async def serve_ssh(handlers: list, host: str = "127.0.0.1", port: int = 8022) -> None:
+async def serve_ssh(
+    handlers: list,
+    host: str = "127.0.0.1",
+    port: int = 8022,
+    *,
+    tuning: TransportTuning = DEFAULT_TUNING,
+) -> None:
     import asyncssh
 
     key = asyncssh.generate_private_key("ssh-ed25519")
@@ -103,11 +119,11 @@ async def serve_ssh(handlers: list, host: str = "127.0.0.1", port: int = 8022) -
             return True
 
     async def session_handler(stdin, stdout, _stderr) -> None:
-        transport = SshTransport(stdin, stdout)
-        protocol = make_server_protocol(mapping)
-        init_server_protocol(protocol, transport)
+        transport = SshTransport(stdin, stdout, tuning=tuning)
+        protocol = make_server_protocol(mapping, tuning=tuning)
+        init_server_protocol(protocol, transport, tuning=tuning)
 
-        await pump(protocol, stdin)
+        await pump(protocol, stdin, tuning=tuning)
 
     acceptor = await asyncssh.create_server(
         _DemoSSHServer,
@@ -132,21 +148,34 @@ async def serve_ssh(handlers: list, host: str = "127.0.0.1", port: int = 8022) -
 
 class SshChannel(client.Channel):
 
-    def __init__(self, reader: Any, writer: Any, **kwargs: Any):
-        kwargs.setdefault("config", make_config())
+    def __init__(
+        self,
+        reader: Any,
+        writer: Any,
+        *,
+        tuning: TransportTuning = DEFAULT_TUNING,
+        **kwargs: Any,
+    ):
+        kwargs.setdefault("config", make_config(tuning))
         super().__init__(host="ssh", port=0, **kwargs)
         self._ssh_reader = reader
         self._ssh_writer = writer
+        self._tuning = tuning
         self._pump_task: asyncio.Task[None] | None = None
         self._ssh_transport: SshTransport | None = None
 
     async def _create_connection(self) -> H2Protocol:
         protocol = self._protocol_factory()
-        transport = SshTransport(self._ssh_reader, self._ssh_writer)
+        transport = SshTransport(
+            self._ssh_reader,
+            self._ssh_writer,
+            tuning=self._tuning,
+        )
         self._ssh_transport = transport
-        init_server_protocol(protocol, transport)
+        init_server_protocol(protocol, transport, tuning=self._tuning)
         self._pump_task = asyncio.create_task(
-            pump(protocol, self._ssh_reader), name="ssh-pump"
+            pump(protocol, self._ssh_reader, tuning=self._tuning),
+            name="ssh-pump",
         )
         return protocol
 

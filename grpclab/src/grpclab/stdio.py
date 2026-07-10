@@ -9,9 +9,9 @@ from grpclib import client
 from grpclib.protocol import H2Protocol
 
 from grpclab.protocol import (
-    BUF_HIGH,
-    BUF_LOW,
+    DEFAULT_TUNING,
     BaseCustomTransport,
+    TransportTuning,
     build_mapping,
     init_server_protocol,
     make_config,
@@ -22,13 +22,23 @@ from grpclab.protocol import (
 
 class StdioTransport(BaseCustomTransport):
 
-    def __init__(self, reader: asyncio.StreamReader, writer: asyncio.StreamWriter):
+    def __init__(
+        self,
+        reader: asyncio.StreamReader,
+        writer: asyncio.StreamWriter,
+        *,
+        tuning: TransportTuning = DEFAULT_TUNING,
+    ):
         super().__init__()
         self._reader = reader
         self._writer = writer
+        self._tuning = tuning
 
         pipe_transport = writer.transport
-        pipe_transport.set_write_buffer_limits(high=BUF_HIGH, low=BUF_LOW)
+        pipe_transport.set_write_buffer_limits(
+            high=tuning.write_high_water,
+            low=tuning.write_low_water,
+        )
 
     def write(self, data: bytes | bytearray | memoryview) -> None:
         self._writer.write(data)
@@ -55,7 +65,10 @@ class StdioTransport(BaseCustomTransport):
         pass
 
 
-async def _stdio_streams() -> tuple[asyncio.StreamReader, asyncio.StreamWriter, StdioTransport]:
+async def _stdio_streams(
+    *,
+    tuning: TransportTuning = DEFAULT_TUNING,
+) -> tuple[asyncio.StreamReader, asyncio.StreamWriter, StdioTransport]:
     loop = asyncio.get_running_loop()
     reader = asyncio.StreamReader()
     await loop.connect_read_pipe(
@@ -79,22 +92,26 @@ async def _stdio_streams() -> tuple[asyncio.StreamReader, asyncio.StreamWriter, 
     )
     writer = asyncio.StreamWriter(t, proto, reader, loop)
 
-    transport = StdioTransport(reader, writer)
+    transport = StdioTransport(reader, writer, tuning=tuning)
     transport_ref.append(transport)
 
     return reader, writer, transport
 
 
-async def serve_stdio(handlers: list) -> None:
+async def serve_stdio(
+    handlers: list,
+    *,
+    tuning: TransportTuning = DEFAULT_TUNING,
+) -> None:
     mapping = build_mapping(handlers)
 
-    reader, _writer, transport = await _stdio_streams()
+    reader, _writer, transport = await _stdio_streams(tuning=tuning)
 
-    protocol = make_server_protocol(mapping)
-    init_server_protocol(protocol, transport)
+    protocol = make_server_protocol(mapping, tuning=tuning)
+    init_server_protocol(protocol, transport, tuning=tuning)
 
     with contextlib.redirect_stdout(sys.stderr):
-        await pump(protocol, reader)
+        await pump(protocol, reader, tuning=tuning)
 
 
 class StdioChannel(client.Channel):
@@ -105,24 +122,27 @@ class StdioChannel(client.Channel):
         writer: Any,
         *,
         transport: StdioTransport | None = None,
+        tuning: TransportTuning = DEFAULT_TUNING,
         **kwargs: Any,
     ):
-        kwargs.setdefault("config", make_config())
+        kwargs.setdefault("config", make_config(tuning))
         super().__init__(host="stdio", port=0, **kwargs)
         self._stdio_reader = reader
         self._stdio_writer = writer
         self._stdio_transport = transport
+        self._tuning = tuning
         self._pump_task: asyncio.Task[None] | None = None
 
     async def _create_connection(self) -> H2Protocol:
         protocol = self._protocol_factory()
         transport = self._stdio_transport or StdioTransport(
-            self._stdio_reader, self._stdio_writer
+            self._stdio_reader, self._stdio_writer, tuning=self._tuning
         )
         self._stdio_transport = transport
-        init_server_protocol(protocol, transport)
+        init_server_protocol(protocol, transport, tuning=self._tuning)
         self._pump_task = asyncio.create_task(
-            pump(protocol, self._stdio_reader), name="stdio-pump"
+            pump(protocol, self._stdio_reader, tuning=self._tuning),
+            name="stdio-pump",
         )
         return protocol
 

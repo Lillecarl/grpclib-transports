@@ -1,8 +1,7 @@
 from grpclab.protocol import (
-    BUF_HIGH,
-    BUF_LOW,
-    READ_CHUNK,
+    DEFAULT_TUNING,
     BaseCustomTransport,
+    TransportTuning,
     build_mapping,
     make_h2_config,
     make_server_protocol,
@@ -13,10 +12,9 @@ from grpclab.ssh import SshChannel, SshTransport, serve_ssh
 from grpclab.stdio import StdioChannel, StdioTransport, serve_stdio
 
 __all__ = [
-    "BUF_HIGH",
-    "BUF_LOW",
-    "READ_CHUNK",
+    "DEFAULT_TUNING",
     "BaseCustomTransport",
+    "TransportTuning",
     "SshChannel",
     "SshTransport",
     "StdioChannel",

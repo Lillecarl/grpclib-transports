@@ -4,6 +4,7 @@ import asyncio
 import inspect
 import os
 from collections.abc import Sequence
+from dataclasses import dataclass
 from typing import Any
 
 from grpclib._typing import IServable
@@ -88,19 +89,40 @@ install_h2_fast_receive_patch()
 
 MAX_FRAME_SIZE = 2**24 - 1
 
-MAX_BUF = _env_size("GRPCLAB_BUFFER_SIZE", 8 * 1024 * 1024)
-BUF_HIGH = MAX_BUF
-BUF_LOW = MAX_BUF // 2
-READ_CHUNK = MAX_BUF
-HTTP2_STREAM_WINDOW_SIZE = _env_size(
-    "GRPCLAB_HTTP2_STREAM_WINDOW_SIZE",
-    max(16 * 1024 * 1024, MAX_BUF * 2),
-)
-HTTP2_CONNECTION_WINDOW_SIZE = _env_size(
-    "GRPCLAB_HTTP2_CONNECTION_WINDOW_SIZE",
-    max(64 * 1024 * 1024, HTTP2_STREAM_WINDOW_SIZE * 4),
-)
-HTTP2_MAX_FRAME_SIZE = min(MAX_BUF, MAX_FRAME_SIZE)
+
+@dataclass(frozen=True)
+class TransportTuning:
+    buffer_size: int
+    read_chunk_size: int
+    write_high_water: int
+    write_low_water: int
+    http2_stream_window_size: int
+    http2_connection_window_size: int
+    http2_max_frame_size: int
+
+    @classmethod
+    def from_env(cls) -> TransportTuning:
+        buffer_size = _env_size("GRPCLAB_BUFFER_SIZE", 8 * 1024 * 1024)
+        stream_window_size = _env_size(
+            "GRPCLAB_HTTP2_STREAM_WINDOW_SIZE",
+            max(16 * 1024 * 1024, buffer_size * 2),
+        )
+        connection_window_size = _env_size(
+            "GRPCLAB_HTTP2_CONNECTION_WINDOW_SIZE",
+            max(64 * 1024 * 1024, stream_window_size * 4),
+        )
+        return cls(
+            buffer_size=buffer_size,
+            read_chunk_size=buffer_size,
+            write_high_water=buffer_size,
+            write_low_water=buffer_size // 2,
+            http2_stream_window_size=stream_window_size,
+            http2_connection_window_size=connection_window_size,
+            http2_max_frame_size=min(buffer_size, MAX_FRAME_SIZE),
+        )
+
+
+DEFAULT_TUNING = TransportTuning.from_env()
 
 
 class BaseCustomTransport(asyncio.Transport):
@@ -141,11 +163,16 @@ class BaseCustomTransport(asyncio.Transport):
         pass
 
 
-async def pump(protocol: H2Protocol, reader: Any) -> None:
+async def pump(
+    protocol: H2Protocol,
+    reader: Any,
+    *,
+    tuning: TransportTuning = DEFAULT_TUNING,
+) -> None:
     exc: BaseException | None = None
     try:
         while True:
-            data = await reader.read(READ_CHUNK)
+            data = await reader.read(tuning.read_chunk_size)
             if not data:
                 break
             protocol.data_received(data)
@@ -166,25 +193,34 @@ def make_h2_config(*, client_side: bool) -> H2Configuration:
     )
 
 
-def make_config() -> Configuration:
+def make_config(tuning: TransportTuning = DEFAULT_TUNING) -> Configuration:
     return Configuration(
-        http2_connection_window_size=HTTP2_CONNECTION_WINDOW_SIZE,
-        http2_stream_window_size=HTTP2_STREAM_WINDOW_SIZE,
+        http2_connection_window_size=tuning.http2_connection_window_size,
+        http2_stream_window_size=tuning.http2_stream_window_size,
     )
 
 
-def make_server_protocol(mapping: dict[str, Handler]) -> H2Protocol:
-    config = make_config().__for_server__()
+def make_server_protocol(
+    mapping: dict[str, Handler],
+    *,
+    tuning: TransportTuning = DEFAULT_TUNING,
+) -> H2Protocol:
+    config = make_config(tuning).__for_server__()
     h2_config = make_h2_config(client_side=False)
     handler = ServerHandler(mapping, ProtoCodec(), None, _DispatchServerEvents())
     return H2Protocol(handler, config, h2_config)
 
 
-def init_server_protocol(protocol: H2Protocol, transport: Any) -> None:
+def init_server_protocol(
+    protocol: H2Protocol,
+    transport: Any,
+    *,
+    tuning: TransportTuning = DEFAULT_TUNING,
+) -> None:
     transport.set_protocol(protocol)
     protocol.connection_made(transport)
     protocol.connection._connection.update_settings({
-        SettingCodes.MAX_FRAME_SIZE: HTTP2_MAX_FRAME_SIZE,
+        SettingCodes.MAX_FRAME_SIZE: tuning.http2_max_frame_size,
     })
     protocol.connection.flush()
 

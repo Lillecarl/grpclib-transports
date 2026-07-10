@@ -7,7 +7,7 @@ from pathlib import Path
 import asyncssh
 from demo import demo_grpc, demo_pb2
 from grpclab.example.server import Greeter
-from grpclab.protocol import MAX_BUF, build_mapping, init_server_protocol, make_server_protocol, pump
+from grpclab.protocol import DEFAULT_TUNING, build_mapping, init_server_protocol, make_server_protocol, pump
 from grpclab.ssh import SshChannel, SshTransport
 
 
@@ -26,8 +26,8 @@ def test_ssh_transport():
 
         key = asyncssh.generate_private_key("ssh-ed25519")
         sock = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
-        sock.setsockopt(socket.SOL_SOCKET, socket.SO_SNDBUF, MAX_BUF)
-        sock.setsockopt(socket.SOL_SOCKET, socket.SO_RCVBUF, MAX_BUF)
+        sock.setsockopt(socket.SOL_SOCKET, socket.SO_SNDBUF, DEFAULT_TUNING.buffer_size)
+        sock.setsockopt(socket.SOL_SOCKET, socket.SO_RCVBUF, DEFAULT_TUNING.buffer_size)
         sock.bind(sock_path)
         sock.listen(100)
 

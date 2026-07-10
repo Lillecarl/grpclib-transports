@@ -12,7 +12,7 @@ from pathlib import Path
 
 import grpclab._logging  # noqa: F401
 from demo import demo_grpc, demo_pb2
-from grpclab.protocol import MAX_BUF
+from grpclab.protocol import DEFAULT_TUNING
 
 
 def _bump_pipe_buf(proc: asyncio.subprocess.Process) -> None:
@@ -24,7 +24,7 @@ def _bump_pipe_buf(proc: asyncio.subprocess.Process) -> None:
         f = getattr(popen, attr, None)
         if f is not None:
             with contextlib.suppress(OSError):
-                fcntl.fcntl(f.fileno(), fcntl.F_SETPIPE_SZ, MAX_BUF)
+                fcntl.fcntl(f.fileno(), fcntl.F_SETPIPE_SZ, DEFAULT_TUNING.buffer_size)
 
 SMALL_COUNT = 200
 LARGE_COUNT = 5
