@@ -10,9 +10,7 @@ from grpclib.server import Handler as ServerHandler
 from grpclib.events import _DispatchServerEvents
 from grpclib.encoding.proto import ProtoCodec
 
-
-_CHANNEL_BUF_HIGH = 65536
-_CHANNEL_BUF_LOW = 32768
+from grpclab.protocol import pump, BUF_HIGH, BUF_LOW
 
 
 class SshTransport(asyncio.Transport):
@@ -25,21 +23,27 @@ class SshTransport(asyncio.Transport):
         self._closing = False
 
         chan = writer._chan
-        chan.set_write_buffer_limits(high=_CHANNEL_BUF_HIGH, low=_CHANNEL_BUF_LOW)
+        chan.set_write_buffer_limits(high=BUF_HIGH, low=BUF_LOW)
         self._chan = chan
-        self._write_paused = False
+
+        session = writer._session
+        self._orig_pause_writing = session.pause_writing
+        self._orig_resume_writing = session.resume_writing
+        session.pause_writing = self._on_pause_writing
+        session.resume_writing = self._on_resume_writing
+
+    def _on_pause_writing(self) -> None:
+        self._orig_pause_writing()
+        if self._protocol is not None:
+            self._protocol.pause_writing()
+
+    def _on_resume_writing(self) -> None:
+        self._orig_resume_writing()
+        if self._protocol is not None:
+            self._protocol.resume_writing()
 
     def write(self, data: bytes) -> None:
         self._writer.write(data)
-        if self._write_paused:
-            if self._chan.get_write_buffer_size() <= self._chan._send_low_water:
-                self._write_paused = False
-                if self._protocol is not None:
-                    self._protocol.resume_writing()
-        elif self._chan.get_write_buffer_size() > self._chan._send_high_water:
-            self._write_paused = True
-            if self._protocol is not None:
-                self._protocol.pause_writing()
 
     def get_write_buffer_size(self) -> int:
         return self._chan.get_write_buffer_size()
@@ -81,18 +85,6 @@ class SshTransport(asyncio.Transport):
     def set_write_buffer_limits(self, high=None, low=None):
         self._chan.set_write_buffer_limits(high=high, low=low)
 
-
-async def _pump(protocol: H2Protocol, reader) -> None:
-    try:
-        while True:
-            data = await reader.read(65536)
-            if not data:
-                break
-            protocol.data_received(data)
-    except (ConnectionError, EOFError, OSError):
-        pass
-    finally:
-        protocol.connection_lost(None)
 
 
 def _make_h2_config(*, client_side: bool) -> H2Configuration:
@@ -140,7 +132,7 @@ async def serve_ssh(handlers: list, host: str = "127.0.0.1", port: int = 8022) -
         transport._protocol = protocol
 
         print("[ssh-server] gRPC session started", file=sys.stderr)
-        await _pump(protocol, stdin)
+        await pump(protocol, stdin)
 
     await asyncssh.create_server(
         _DemoSSHServer,
@@ -166,7 +158,7 @@ class SshChannel(client.Channel):
         transport = SshTransport(self._ssh_reader, self._ssh_writer)
         protocol.connection_made(transport)
         transport._protocol = protocol
-        asyncio.create_task(_pump(protocol, self._ssh_reader))
+        asyncio.create_task(pump(protocol, self._ssh_reader))
         return protocol
 
 

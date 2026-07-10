@@ -6,7 +6,8 @@ import os
 import asyncssh
 from demo import demo_grpc, demo_pb2
 from grpclab.server import Greeter
-from grpclab.ssh import SshTransport, SshChannel, _make_server_protocol, _pump
+from grpclab.protocol import pump
+from grpclab.ssh import SshTransport, SshChannel, _make_server_protocol
 
 
 class _TestSSHServer(asyncssh.SSHServer):
@@ -34,7 +35,7 @@ def test_ssh_transport():
             protocol = _make_server_protocol(mapping)
             protocol.connection_made(transport)
             transport._protocol = protocol
-            await _pump(protocol, process.stdin)
+            await pump(protocol, process.stdin)
 
         acceptor = await asyncssh.listen(
             sock=sock,

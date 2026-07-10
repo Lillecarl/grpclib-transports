@@ -11,6 +11,8 @@ from grpclib.server import Handler as ServerHandler
 from grpclib.events import _DispatchServerEvents
 from grpclib.encoding.proto import ProtoCodec
 
+from grpclab.protocol import pump, BUF_HIGH, BUF_LOW
+
 
 class StreamReaderWriterTransport(asyncio.Transport):
 
@@ -67,7 +69,7 @@ class StdioTransport(asyncio.Transport):
         self._closing = False
 
         pipe_transport = writer.transport
-        pipe_transport.set_write_buffer_limits(high=65536, low=32768)
+        pipe_transport.set_write_buffer_limits(high=BUF_HIGH, low=BUF_LOW)
 
     def write(self, data: bytes) -> None:
         self._writer.write(data)
@@ -107,18 +109,6 @@ class StdioTransport(asyncio.Transport):
     def resume_reading(self):
         pass
 
-
-async def _pump(protocol: H2Protocol, reader) -> None:
-    try:
-        while True:
-            data = await reader.read(65536)
-            if not data:
-                break
-            protocol.data_received(data)
-    except (ConnectionError, EOFError, OSError):
-        pass
-    finally:
-        protocol.connection_lost(None)
 
 
 async def _stdio_streams():
@@ -180,7 +170,7 @@ async def serve_stdio(handlers: list) -> None:
 
     print("[server] running on stdin/stdout", file=sys.stderr)
     with contextlib.redirect_stdout(sys.stderr):
-        await _pump(protocol, reader)
+        await pump(protocol, reader)
 
 
 class StdioChannel(client.Channel):
@@ -205,5 +195,5 @@ class StdioChannel(client.Channel):
         else:
             transport = StreamReaderWriterTransport(self._stdio_reader, self._stdio_writer)
         protocol.connection_made(transport)
-        asyncio.create_task(_pump(protocol, self._stdio_reader))
+        asyncio.create_task(pump(protocol, self._stdio_reader))
         return protocol

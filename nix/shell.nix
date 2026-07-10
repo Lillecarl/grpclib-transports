@@ -4,9 +4,10 @@
   proto,
   asyncssh,
   pytest,
+  pyinstrument,
 }:
 let
-  python = python3.withPackages (pp: [ proto asyncssh pytest ]);
+  python = python3.withPackages (pp: [ proto asyncssh pytest pyinstrument ]);
 in
 mkShell {
   packages = [

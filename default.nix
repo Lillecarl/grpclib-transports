@@ -9,5 +9,6 @@ rec {
   shell = pkgs.callPackage ./nix/shell.nix {
     inherit proto asyncssh;
     pytest = pkgs.python3Packages.pytest;
+    pyinstrument = pkgs.python3Packages.pyinstrument;
   };
 }
