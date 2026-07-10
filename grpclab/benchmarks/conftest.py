@@ -108,40 +108,43 @@ def _dump_profile(label: str, path_to_timeline: str) -> Path:
     return path
 
 
-async def _bench_once(stub, req, count, parallelism=1):
-    start = 0.0
-
+async def _bench_warmup(stub, req, parallelism=1):
     if parallelism == 1:
-        for i in range(count + 1):
-            await stub.SayHello(req)
-            if i == 0:
-                start = time.perf_counter()
+        await stub.SayHello(req)
     else:
         warmup = [asyncio.create_task(stub.SayHello(req)) for _ in range(parallelism)]
         await asyncio.gather(*warmup)
 
-        q: asyncio.Queue[None] = asyncio.Queue()
-        for _ in range(count):
-            q.put_nowait(None)
 
-        async def worker():
-            while True:
-                try:
-                    q.get_nowait()
-                except asyncio.QueueEmpty:
-                    return
-                await stub.SayHello(req)
-
+async def _bench_once(stub, req, count, parallelism=1):
+    if parallelism == 1:
         start = time.perf_counter()
-        workers = [asyncio.create_task(worker()) for _ in range(parallelism)]
-        await asyncio.gather(*workers)
+        for _ in range(count):
+            await stub.SayHello(req)
+        return time.perf_counter() - start
 
+    q: asyncio.Queue[None] = asyncio.Queue()
+    for _ in range(count):
+        q.put_nowait(None)
+
+    async def worker():
+        while True:
+            try:
+                q.get_nowait()
+            except asyncio.QueueEmpty:
+                return
+            await stub.SayHello(req)
+
+    start = time.perf_counter()
+    workers = [asyncio.create_task(worker()) for _ in range(parallelism)]
+    await asyncio.gather(*workers)
     return time.perf_counter() - start
 
 
 async def _bench(label, payload, count, channel, parallelism=1):
     stub = demo_grpc.GreeterStub(channel)
     req = demo_pb2.HelloRequest(name="bench", payload=payload)
+    await _bench_warmup(stub, req, parallelism=parallelism)
     samples = [
         await _bench_once(stub, req, count, parallelism=parallelism)
         for _ in range(BENCH_SAMPLES)
