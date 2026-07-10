@@ -211,7 +211,7 @@ def make_server_protocol(
     return H2Protocol(handler, config, h2_config)
 
 
-def init_server_protocol(
+def init_h2_transport(
     protocol: H2Protocol,
     transport: Any,
     *,

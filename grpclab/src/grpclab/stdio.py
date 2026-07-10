@@ -13,7 +13,7 @@ from grpclab.protocol import (
     BaseCustomTransport,
     TransportTuning,
     build_mapping,
-    init_server_protocol,
+    init_h2_transport,
     make_config,
     make_server_protocol,
     pump,
@@ -108,7 +108,7 @@ async def serve_stdio(
     reader, _writer, transport = await _stdio_streams(tuning=tuning)
 
     protocol = make_server_protocol(mapping, tuning=tuning)
-    init_server_protocol(protocol, transport, tuning=tuning)
+    init_h2_transport(protocol, transport, tuning=tuning)
 
     with contextlib.redirect_stdout(sys.stderr):
         await pump(protocol, reader, tuning=tuning)
@@ -139,7 +139,7 @@ class StdioChannel(client.Channel):
             self._stdio_reader, self._stdio_writer, tuning=self._tuning
         )
         self._stdio_transport = transport
-        init_server_protocol(protocol, transport, tuning=self._tuning)
+        init_h2_transport(protocol, transport, tuning=self._tuning)
         self._pump_task = asyncio.create_task(
             pump(protocol, self._stdio_reader, tuning=self._tuning),
             name="stdio-pump",
