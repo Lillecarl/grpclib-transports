@@ -22,7 +22,7 @@ def test_stdio(parallelism):
         finally:
             channel.close()
             proc.kill()
-            serr = await asyncio.wait_for(proc.stderr.read(), timeout=3)
+            serr = await asyncio.wait_for(proc.stderr.read(), timeout=3) if proc.stderr else b""
             if serr:
                 pass
     _run(f"stdio (p={parallelism})", run())

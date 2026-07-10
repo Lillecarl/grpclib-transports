@@ -15,7 +15,7 @@ from grpclab.ssh import SshChannel, SshTransport
 def test_ssh(parallelism):
     class _Server(asyncssh.SSHServer):
         def password_auth_supported(self): return True
-        def validate_password(self, u, p): return True
+        def validate_password(self, username, password): return True
 
     async def run():
         sock = tempfile.mktemp(suffix=".sock")

@@ -42,16 +42,18 @@ class SshTransport(BaseCustomTransport):
             self._orig_resume_writing = None
 
     def _on_pause_writing(self) -> None:
-        self._orig_pause_writing()
+        if self._orig_pause_writing is not None:
+            self._orig_pause_writing()
         if self._protocol is not None:
             self._protocol.pause_writing()
 
     def _on_resume_writing(self) -> None:
-        self._orig_resume_writing()
+        if self._orig_resume_writing is not None:
+            self._orig_resume_writing()
         if self._protocol is not None:
             self._protocol.resume_writing()
 
-    def write(self, data: bytes) -> None:
+    def write(self, data: bytes | bytearray | memoryview) -> None:
         self._writer.write(data)
 
     def get_write_buffer_size(self) -> int:

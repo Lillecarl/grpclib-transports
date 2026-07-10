@@ -5,11 +5,21 @@
   asyncssh,
   pytest,
   pyinstrument,
+  grpclab,
   pyright,
   ruff,
 }:
 let
-  python = python3.withPackages (pp: [ proto asyncssh pytest pyinstrument ]);
+  python = python3.withPackages (
+    pp:
+    grpclab.dependencies
+    ++ [
+      proto
+      asyncssh
+      pytest
+      pyinstrument
+    ]
+  );
 in
 mkShell {
   packages = [

@@ -15,6 +15,8 @@ class Greeter(demo_grpc.GreeterBase):
     @typing.override
     async def SayHello(self, stream):
         request = await stream.recv_message()
+        if request is None:
+            return
         reply = demo_pb2.HelloReply(message=f"Hello, {request.name}!")
         await stream.send_message(reply)
 

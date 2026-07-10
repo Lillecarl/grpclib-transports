@@ -22,7 +22,7 @@ DUMP_DIR.mkdir(parents=True, exist_ok=True)
 TIMEOUT = 30
 
 _bench_results: list[dict] = []
-_dump_paths: list[str] = []
+_dump_paths: list[Path] = []
 
 
 def _report(label, count, elapsed, payload_size):
@@ -46,7 +46,7 @@ def _report(label, count, elapsed, payload_size):
         })
 
 
-def _dump_tasks(label: str, loop: asyncio.AbstractEventLoop) -> str:
+def _dump_tasks(label: str, loop: asyncio.AbstractEventLoop) -> Path:
     """Dump all asyncio task stacks to a file, return the file path."""
     safe = re.sub(r"[^\w.]", "_", label)
     path = DUMP_DIR / f"{safe}_tasks.txt"
@@ -69,7 +69,7 @@ def _dump_tasks(label: str, loop: asyncio.AbstractEventLoop) -> str:
     return path
 
 
-def _dump_profile(label: str, path_to_timeline: str) -> str:
+def _dump_profile(label: str, path_to_timeline: str) -> Path:
     """Write the pyinstrument pathToTimeline to a text file, return the file path."""
     safe = re.sub(r"[^\w.]", "_", label)
     path = DUMP_DIR / f"{safe}_profile.txt"
@@ -82,6 +82,7 @@ def _dump_profile(label: str, path_to_timeline: str) -> str:
 async def _bench(label, payload, count, channel, parallelism=1):
     stub = demo_grpc.GreeterStub(channel)
     req = demo_pb2.HelloRequest(name="bench", payload=payload)
+    start = 0.0
 
     if parallelism == 1:
         for i in range(count + 1):

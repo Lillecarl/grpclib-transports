@@ -26,7 +26,7 @@ class StdioTransport(BaseCustomTransport):
         pipe_transport = writer.transport
         pipe_transport.set_write_buffer_limits(high=BUF_HIGH, low=BUF_LOW)
 
-    def write(self, data: bytes) -> None:
+    def write(self, data: bytes | bytearray | memoryview) -> None:
         self._writer.write(data)
 
     def get_write_buffer_size(self) -> int:

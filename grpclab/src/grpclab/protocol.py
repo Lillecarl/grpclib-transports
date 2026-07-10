@@ -1,5 +1,5 @@
 import asyncio
-from collections.abc import Mapping, Sequence
+from collections.abc import Sequence
 from typing import Any
 
 from grpclib._typing import IServable
@@ -76,7 +76,7 @@ def make_h2_config(*, client_side: bool) -> H2Configuration:
     )
 
 
-def make_server_protocol(mapping: Mapping[str, Handler]) -> H2Protocol:
+def make_server_protocol(mapping: dict[str, Handler]) -> H2Protocol:
     config = Configuration().__for_server__()
     h2_config = make_h2_config(client_side=False)
     handler = ServerHandler(mapping, ProtoCodec(), None, _DispatchServerEvents())
