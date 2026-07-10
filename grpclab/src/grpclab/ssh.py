@@ -10,6 +10,7 @@ from grpclab.protocol import (
     BUF_LOW,
     BaseCustomTransport,
     build_mapping,
+    init_server_protocol,
     make_server_protocol,
     pump,
     signal_stop,
@@ -101,8 +102,7 @@ async def serve_ssh(handlers: list, host: str = "127.0.0.1", port: int = 8022) -
     async def session_handler(stdin, stdout, _stderr) -> None:
         transport = SshTransport(stdin, stdout)
         protocol = make_server_protocol(mapping)
-        protocol.connection_made(transport)
-        transport._protocol = protocol
+        init_server_protocol(protocol, transport)
 
         await pump(protocol, stdin)
 
@@ -140,8 +140,7 @@ class SshChannel(client.Channel):
         protocol = self._protocol_factory()
         transport = SshTransport(self._ssh_reader, self._ssh_writer)
         self._ssh_transport = transport
-        protocol.connection_made(transport)
-        transport._protocol = protocol
+        init_server_protocol(protocol, transport)
         self._pump_task = asyncio.create_task(
             pump(protocol, self._ssh_reader), name="ssh-pump"
         )

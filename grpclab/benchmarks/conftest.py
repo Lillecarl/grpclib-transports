@@ -1,7 +1,10 @@
 from __future__ import annotations
 
 import asyncio
+import contextlib
+import fcntl
 import io
+import logging
 import os
 import re
 import time
@@ -9,6 +12,22 @@ import traceback
 from pathlib import Path
 
 from demo import demo_grpc, demo_pb2
+from grpclab.protocol import MAX_BUF
+
+logging.getLogger("h2").setLevel(logging.WARNING)
+logging.getLogger("asyncssh").setLevel(logging.WARNING)
+
+
+def _bump_pipe_buf(proc: asyncio.subprocess.Process) -> None:
+    """Increase kernel pipe buffer size on subprocess pipes."""
+    popen = getattr(getattr(proc, "_transport", None), "_proc", None)
+    if popen is None:
+        return
+    for attr in ("stdin", "stdout", "stderr"):
+        f = getattr(popen, attr, None)
+        if f is not None:
+            with contextlib.suppress(OSError):
+                fcntl.fcntl(f.fileno(), fcntl.F_SETPIPE_SZ, MAX_BUF)
 
 SMALL_COUNT = 200
 LARGE_COUNT = 5

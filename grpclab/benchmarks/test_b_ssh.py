@@ -7,7 +7,7 @@ import asyncssh
 import pytest
 from conftest import LARGE_COUNT, LARGE_PAYLOAD, SMALL_COUNT, SMALL_PAYLOAD, _bench, _run
 from grpclab.example.server import Greeter
-from grpclab.protocol import build_mapping, make_server_protocol, pump
+from grpclab.protocol import MAX_BUF, build_mapping, init_server_protocol, make_server_protocol, pump
 from grpclab.ssh import SshChannel, SshTransport
 
 
@@ -22,14 +22,15 @@ def test_ssh(parallelism):
         mapping = build_mapping([Greeter()])
         key = asyncssh.generate_private_key("ssh-ed25519")
         ssock = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
+        ssock.setsockopt(socket.SOL_SOCKET, socket.SO_SNDBUF, MAX_BUF)
+        ssock.setsockopt(socket.SOL_SOCKET, socket.SO_RCVBUF, MAX_BUF)
         ssock.bind(sock)
         ssock.listen(100)
 
         async def session_handler(stdin, stdout, _stderr):
             t = SshTransport(stdin, stdout)
             p = make_server_protocol(mapping)
-            p.connection_made(t)
-            t._protocol = p
+            init_server_protocol(p, t)
             await pump(p, stdin)
 
         acceptor = await asyncssh.listen(

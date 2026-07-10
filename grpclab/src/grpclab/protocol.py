@@ -10,10 +10,12 @@ from grpclib.events import _DispatchServerEvents
 from grpclib.protocol import H2Protocol
 from grpclib.server import Handler as ServerHandler
 from h2.config import H2Configuration
+from h2.settings import SettingCodes
 
-BUF_HIGH = pow(2, 19)  # 512 KiB — high watermark for write buffering
-BUF_LOW = pow(2, 18)   # 256 KiB — low watermark for write buffering
-READ_CHUNK = pow(2, 19)  # 512 KiB — read chunk size for pump()
+MAX_BUF = pow(2, 20)  # 1 MiB — unified buffer size
+BUF_HIGH = MAX_BUF
+BUF_LOW = MAX_BUF // 2
+READ_CHUNK = MAX_BUF
 
 
 class BaseCustomTransport(asyncio.Transport):
@@ -84,6 +86,13 @@ def make_server_protocol(mapping: dict[str, Handler]) -> H2Protocol:
     h2_config = make_h2_config(client_side=False)
     handler = ServerHandler(mapping, ProtoCodec(), None, _DispatchServerEvents())
     return H2Protocol(handler, config, h2_config)
+
+
+def init_server_protocol(protocol: H2Protocol, transport: Any) -> None:
+    protocol.connection_made(transport)
+    protocol.connection._connection.update_settings({
+        SettingCodes.MAX_FRAME_SIZE: MAX_BUF,
+    })
 
 
 def build_mapping(handlers: Sequence[IServable]) -> dict[str, Handler]:

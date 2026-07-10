@@ -2,7 +2,7 @@ import asyncio
 import sys
 
 import pytest
-from conftest import LARGE_COUNT, LARGE_PAYLOAD, SMALL_COUNT, SMALL_PAYLOAD, _bench, _run
+from conftest import LARGE_COUNT, LARGE_PAYLOAD, SMALL_COUNT, SMALL_PAYLOAD, _bench, _bump_pipe_buf, _run
 from grpclab.stdio import StdioChannel
 
 
@@ -15,6 +15,7 @@ def test_stdio(parallelism):
             stdout=asyncio.subprocess.PIPE,
             stderr=asyncio.subprocess.PIPE,
         )
+        _bump_pipe_buf(proc)
         channel = StdioChannel(proc.stdout, proc.stdin)
         try:
             await _bench(f"stdio (small, p={parallelism})", SMALL_PAYLOAD, SMALL_COUNT, channel, parallelism=parallelism)
