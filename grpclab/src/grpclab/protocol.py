@@ -3,6 +3,7 @@ from __future__ import annotations
 import asyncio
 import inspect
 import os
+import re
 from collections.abc import Sequence
 from dataclasses import dataclass
 from typing import Any
@@ -22,14 +23,44 @@ from h2.settings import SettingCodes
 from hyperframe.frame import RstStreamFrame
 
 
+_SIZE_UNITS = {
+    "": 1,
+    "b": 1,
+    "k": 1000,
+    "kb": 1000,
+    "m": 1000**2,
+    "mb": 1000**2,
+    "g": 1000**3,
+    "gb": 1000**3,
+    "ki": 1024,
+    "kib": 1024,
+    "mi": 1024**2,
+    "mib": 1024**2,
+    "gi": 1024**3,
+    "gib": 1024**3,
+}
+
+
+def _parse_size(value: str) -> int:
+    match = re.fullmatch(r"(\d+)\s*([a-zA-Z]*)", value.strip())
+    if match is None:
+        raise ValueError("expected an integer byte count or a size like 8MiB")
+    amount = int(match.group(1))
+    unit = match.group(2).lower()
+    multiplier = _SIZE_UNITS.get(unit)
+    if multiplier is None:
+        raise ValueError(f"unknown size unit {unit!r}")
+    return amount * multiplier
+
+
 def _env_size(name: str, default: int) -> int:
     raw = os.environ.get(name)
     if raw is None:
         return default
     try:
-        value = int(raw)
+        value = _parse_size(raw)
     except ValueError as e:
-        raise ValueError(f"{name} must be an integer byte count") from e
+        raise ValueError(f"{name} must be an integer byte count or size literal") from e
     if value <= 0:
         raise ValueError(f"{name} must be positive")
     return value
