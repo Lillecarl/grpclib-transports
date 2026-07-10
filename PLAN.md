@@ -139,7 +139,11 @@ Override `close()` in channel subclasses to:
 - The pump task should be created with a name for debuggability.
 - Make sure tests still pass — `test_stdio` does `channel.close()` + `proc.kill()`.
 
-**Status**: pending
+**Status**: done — Both `SshChannel` and `StdioChannel` now store the pump
+task and transport reference. `close()` calls `super().close()` first (which
+cleans up grpclib's protocol), then cancels the pump task if not done, then
+closes the underlying transport/writer. Pump tasks are named (`"ssh-pump"`,
+`"stdio-pump"`) for debuggability in task stack dumps.
 
 ---
 

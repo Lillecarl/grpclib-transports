@@ -115,14 +115,27 @@ class SshChannel(client.Channel):
         super().__init__(host="ssh", port=0, **kwargs)
         self._ssh_reader = reader
         self._ssh_writer = writer
+        self._pump_task: asyncio.Task[None] | None = None
+        self._ssh_transport: SshTransport | None = None
 
     async def _create_connection(self) -> H2Protocol:
         protocol = self._protocol_factory()
         transport = SshTransport(self._ssh_reader, self._ssh_writer)
+        self._ssh_transport = transport
         protocol.connection_made(transport)
         transport._protocol = protocol
-        asyncio.create_task(pump(protocol, self._ssh_reader))
+        self._pump_task = asyncio.create_task(
+            pump(protocol, self._ssh_reader), name="ssh-pump"
+        )
         return protocol
+
+    def close(self) -> None:
+        super().close()
+        if self._pump_task is not None and not self._pump_task.done():
+            self._pump_task.cancel()
+        if self._ssh_transport is not None:
+            self._ssh_transport.close()
+        self._ssh_writer.close()
 
 
 async def greet_ssh(

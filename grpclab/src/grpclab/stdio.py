@@ -108,12 +108,23 @@ class StdioChannel(client.Channel):
         self._stdio_reader = reader
         self._stdio_writer = writer
         self._stdio_transport = transport
+        self._pump_task: asyncio.Task[None] | None = None
 
     async def _create_connection(self) -> H2Protocol:
         protocol = self._protocol_factory()
         transport = self._stdio_transport or StdioTransport(
             self._stdio_reader, self._stdio_writer
         )
+        self._stdio_transport = transport
         protocol.connection_made(transport)
-        asyncio.create_task(pump(protocol, self._stdio_reader))
+        self._pump_task = asyncio.create_task(
+            pump(protocol, self._stdio_reader), name="stdio-pump"
+        )
         return protocol
+
+    def close(self) -> None:
+        super().close()
+        if self._pump_task is not None and not self._pump_task.done():
+            self._pump_task.cancel()
+        if self._stdio_transport is not None:
+            self._stdio_transport.close()
