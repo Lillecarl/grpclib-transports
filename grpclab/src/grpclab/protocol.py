@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import asyncio
+import inspect
 import os
 from collections.abc import Sequence
 from typing import Any
@@ -33,7 +34,13 @@ def _env_size(name: str, default: int) -> int:
     return value
 
 
-def _receive_frame(self: H2Connection, frame: Any) -> list[Any]:
+_H2_FAST_RECEIVE_PATCH_INSTALLED = False
+
+
+def _receive_frame_without_trace_repr(
+    self: H2Connection,
+    frame: Any,
+) -> list[Any]:
     events: list
     try:
         frames, events = self._frame_dispatch_table[frame.__class__](frame)
@@ -60,7 +67,24 @@ def _receive_frame(self: H2Connection, frame: Any) -> list[Any]:
     return events
 
 
-H2Connection._receive_frame = _receive_frame
+def install_h2_fast_receive_patch() -> None:
+    """Avoid h2's trace logging frame repr cost without changing frame handling."""
+    global _H2_FAST_RECEIVE_PATCH_INSTALLED
+
+    if _H2_FAST_RECEIVE_PATCH_INSTALLED:
+        return
+
+    params = tuple(inspect.signature(H2Connection._receive_frame).parameters)
+    if params != ("self", "frame"):
+        raise RuntimeError(
+            "Unsupported h2 H2Connection._receive_frame signature: "
+            f"{params!r}"
+        )
+    H2Connection._receive_frame = _receive_frame_without_trace_repr
+    _H2_FAST_RECEIVE_PATCH_INSTALLED = True
+
+
+install_h2_fast_receive_patch()
 
 MAX_FRAME_SIZE = 2**24 - 1
 
