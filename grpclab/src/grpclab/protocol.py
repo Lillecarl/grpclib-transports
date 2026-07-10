@@ -4,7 +4,7 @@ import asyncio
 import inspect
 import os
 import re
-from collections.abc import Sequence
+from collections.abc import Iterator, Sequence
 from dataclasses import dataclass
 from typing import Any
 
@@ -219,14 +219,12 @@ def resume_h2_protocol(protocol: asyncio.BaseProtocol | None) -> None:
         protocol.resume_writing()
 
 
-def iter_chunks(data: bytes | bytearray | memoryview, chunk_size: int) -> Sequence[bytes]:
+def iter_chunks(data: bytes | bytearray | memoryview, chunk_size: int) -> Iterator[bytes]:
     if chunk_size <= 0:
         raise ValueError("chunk_size must be positive")
     view = memoryview(data)
-    return [
-        view[offset : offset + chunk_size].tobytes()
-        for offset in range(0, len(view), chunk_size)
-    ]
+    for offset in range(0, len(view), chunk_size):
+        yield view[offset : offset + chunk_size].tobytes()
 
 
 async def pump(
