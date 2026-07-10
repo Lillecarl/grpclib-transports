@@ -35,12 +35,22 @@ def test_ssh(parallelism):
         acceptor = await asyncssh.listen(
             sock=ssock, server_host_keys=[key], server_factory=_Server,
             process_factory=session_handler, encoding=None,
+            encryption_algs=[
+                "aes256-gcm@openssh.com", "aes128-gcm@openssh.com",
+                "aes256-ctr", "aes192-ctr", "aes128-ctr",
+                "chacha20-poly1305@openssh.com",
+            ],
         )
         try:
             csock = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
             csock.connect(sock)
             conn = await asyncssh.connect(
                 sock=csock, known_hosts=None, username="x", password="x",
+                encryption_algs=[
+                    "aes256-gcm@openssh.com", "aes128-gcm@openssh.com",
+                    "aes256-ctr", "aes192-ctr", "aes128-ctr",
+                    "chacha20-poly1305@openssh.com",
+                ],
             )
             try:
                 stdin, stdout, _ = await conn.open_session(encoding=None)

@@ -42,6 +42,11 @@ def test_ssh_transport():
             server_factory=_TestSSHServer,
             process_factory=session_handler,
             encoding=None,
+            encryption_algs=[
+                "aes256-gcm@openssh.com", "aes128-gcm@openssh.com",
+                "aes256-ctr", "aes192-ctr", "aes128-ctr",
+                "chacha20-poly1305@openssh.com",
+            ],
         )
         try:
             client_sock = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
@@ -52,6 +57,11 @@ def test_ssh_transport():
                 known_hosts=None,
                 username="test",
                 password="test",
+                encryption_algs=[
+                    "aes256-gcm@openssh.com", "aes128-gcm@openssh.com",
+                    "aes256-ctr", "aes192-ctr", "aes128-ctr",
+                    "chacha20-poly1305@openssh.com",
+                ],
             )
             try:
                 stdin, stdout, _stderr = await conn.open_session(
