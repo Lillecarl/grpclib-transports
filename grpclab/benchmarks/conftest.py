@@ -44,6 +44,12 @@ _bench_results: list[dict] = []
 _dump_paths: list[Path] = []
 
 
+def _bench_types() -> list[str]:
+    preferred = ["small", "large"]
+    seen = {r["type"] for r in _bench_results}
+    return [t for t in preferred if t in seen] + sorted(seen - set(preferred))
+
+
 def _sample_rate(count, elapsed, payload_size):
     if payload_size:
         return count * payload_size / elapsed / (1024 * 1024)
@@ -264,7 +270,7 @@ def pytest_terminal_summary(terminalreporter, exitstatus, config):  # noqa: ARG0
 
     terminalreporter.section("Benchmark Summary", bold=True, blue=True)
 
-    for test_type in ("small", "large"):
+    for test_type in _bench_types():
         rows = [r for r in _bench_results if r["type"] == test_type]
         if not rows:
             continue
@@ -295,7 +301,7 @@ def pytest_terminal_summary(terminalreporter, exitstatus, config):  # noqa: ARG0
         f"Relative sample range across {BENCH_SAMPLES} samples; lower is steadier."
     )
 
-    for test_type in ("small", "large"):
+    for test_type in _bench_types():
         rows = [r for r in _bench_results if r["type"] == test_type]
         if not rows:
             continue
