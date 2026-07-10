@@ -43,7 +43,13 @@ _bench_results: list[dict] = []
 _dump_paths: list[Path] = []
 
 
-def _report(label, count, elapsed, payload_size):
+def _sample_rate(count, elapsed, payload_size):
+    if payload_size:
+        return count * payload_size / elapsed / (1024 * 1024)
+    return count / elapsed
+
+
+def _report(label, count, elapsed, payload_size, samples):
     msgs_per_sec = count / elapsed
     total_bytes = count * payload_size
     mb_per_sec = total_bytes / elapsed / (1024 * 1024)
@@ -61,6 +67,10 @@ def _report(label, count, elapsed, payload_size):
             "payload_size": payload_size,
             "msgs_per_sec": msgs_per_sec,
             "mb_per_sec": mb_per_sec,
+            "sample_rates": [
+                _sample_rate(count, sample, payload_size)
+                for sample in samples
+            ],
         })
 
 
@@ -136,7 +146,7 @@ async def _bench(label, payload, count, channel, parallelism=1):
         for _ in range(BENCH_SAMPLES)
     ]
     elapsed = statistics.median(samples)
-    _report(label, count, elapsed, len(payload))
+    _report(label, count, elapsed, len(payload), samples)
 
 
 async def _runner_with_timeout(coro, label, loop):
@@ -227,6 +237,15 @@ def _fmt_mb(v: float) -> str:
     return f"{v:>10.2f} MB/s"
 
 
+def _fmt_spread(sample_rates: list[float]) -> str:
+    high = max(sample_rates)
+    low = min(sample_rates)
+    median = statistics.median(sample_rates)
+    if median == 0:
+        return f"{'0.0%':>14}"
+    return f"{((high - low) / median * 100):>13.1f}%"
+
+
 def pytest_terminal_summary(terminalreporter, exitstatus, config):  # noqa: ARG001
     if not _bench_results:
         # Even if no results, print dump paths if we have them
@@ -260,6 +279,34 @@ def pytest_terminal_summary(terminalreporter, exitstatus, config):  # noqa: ARG0
                 if match:
                     fmt = _fmt_mb if match["payload_size"] else _fmt_msgs
                     line += "  " + fmt(match["mb_per_sec"] if match["payload_size"] else match["msgs_per_sec"])
+                else:
+                    line += f"  {'N/A':>14}"
+            terminalreporter.write_line(line)
+
+    terminalreporter.section("Benchmark Spread", bold=True, blue=True)
+    terminalreporter.write_line(
+        f"Relative sample range across {BENCH_SAMPLES} samples; lower is steadier."
+    )
+
+    for test_type in ("small", "large"):
+        rows = [r for r in _bench_results if r["type"] == test_type]
+        if not rows:
+            continue
+
+        transports = sorted({r["transport"] for r in rows})
+        parallelisms = sorted({r["parallelism"] for r in rows})
+
+        terminalreporter.write_line(f"\n{test_type.upper()}\n")
+        header = f"{'Transport':<12}" + "".join(f"  {f'p={p}':>14}" for p in parallelisms)
+        terminalreporter.write_line(header)
+        terminalreporter.write_line("-" * len(header))
+
+        for t in transports:
+            line = f"{t:<12}"
+            for p in parallelisms:
+                match = next((r for r in rows if r["transport"] == t and r["parallelism"] == p), None)
+                if match:
+                    line += "  " + _fmt_spread(match["sample_rates"])
                 else:
                     line += f"  {'N/A':>14}"
             terminalreporter.write_line(line)
