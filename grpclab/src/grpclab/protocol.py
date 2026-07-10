@@ -131,10 +131,15 @@ class TransportTuning:
     http2_stream_window_size: int
     http2_connection_window_size: int
     http2_max_frame_size: int
+    transfer_chunk_size: int
 
     @classmethod
     def from_env(cls) -> TransportTuning:
         buffer_size = _env_size("GRPCLAB_BUFFER_SIZE", 8 * 1024 * 1024)
+        transfer_chunk_size = _env_size(
+            "GRPCLAB_TRANSFER_CHUNK_SIZE",
+            256 * 1024,
+        )
         stream_window_size = _env_size(
             "GRPCLAB_HTTP2_STREAM_WINDOW_SIZE",
             max(16 * 1024 * 1024, buffer_size * 2),
@@ -159,6 +164,7 @@ class TransportTuning:
             http2_stream_window_size=stream_window_size,
             http2_connection_window_size=connection_window_size,
             http2_max_frame_size=max_frame_size,
+            transfer_chunk_size=transfer_chunk_size,
         )
 
 
@@ -211,6 +217,16 @@ def pause_h2_protocol(protocol: asyncio.BaseProtocol | None) -> None:
 def resume_h2_protocol(protocol: asyncio.BaseProtocol | None) -> None:
     if protocol is not None:
         protocol.resume_writing()
+
+
+def iter_chunks(data: bytes | bytearray | memoryview, chunk_size: int) -> Sequence[bytes]:
+    if chunk_size <= 0:
+        raise ValueError("chunk_size must be positive")
+    view = memoryview(data)
+    return [
+        view[offset : offset + chunk_size].tobytes()
+        for offset in range(0, len(view), chunk_size)
+    ]
 
 
 async def pump(

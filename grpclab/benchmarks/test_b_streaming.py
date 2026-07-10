@@ -12,17 +12,16 @@ import anyio
 import pytest
 from conftest import BENCH_SAMPLES, _bump_pipe_buf, _report, _run
 from demo import demo_grpc, demo_pb2
-from grpclab.protocol import make_config
+from grpclab.protocol import DEFAULT_TUNING, iter_chunks, make_config
 from grpclab.stdio import StdioChannel
 from grpclib.client import Channel
 
-CHUNK_SIZE = 256 * 1024
 TOTAL_SIZE = 8 * 1024 * 1024
 UPLOAD_COUNT = 2
-UPLOAD_CHUNK = os.urandom(CHUNK_SIZE)
+UPLOAD_DATA = os.urandom(TOTAL_SIZE)
 UPLOAD_MESSAGES = [
-    demo_pb2.HelloRequest(name="chunk", payload=UPLOAD_CHUNK)
-    for _ in range(TOTAL_SIZE // CHUNK_SIZE)
+    demo_pb2.HelloRequest(name="chunk", payload=chunk)
+    for chunk in iter_chunks(UPLOAD_DATA, DEFAULT_TUNING.transfer_chunk_size)
 ]
 
 
