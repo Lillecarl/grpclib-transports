@@ -17,6 +17,10 @@ what to inspect next, then query `/tmp/pytest.log` for the full failure context.
 
 # Python coding conventions
 
+- Backward compatibility is not a concern in this repository. Do not preserve
+  old APIs, exported names, behavior, or compatibility shims unless the user
+  explicitly asks for compatibility in that specific task.
+
 - Use `from __future__ import annotations` in Python modules that define or use
   type annotations.
 - Do not use string type hints such as `"Store"`. Use future annotations and
