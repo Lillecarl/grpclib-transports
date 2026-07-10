@@ -3,6 +3,7 @@ from __future__ import annotations
 import asyncio
 import contextlib
 import signal
+from dataclasses import dataclass
 from typing import Any
 
 from grpclib import client
@@ -23,6 +24,28 @@ from grpclab.protocol import (
 )
 
 
+def _required_asyncssh_attr(obj: Any, name: str) -> Any:
+    value = getattr(obj, name, None)
+    if value is None:
+        raise RuntimeError(f"AsyncSSH writer is missing required {name!r} attribute")
+    return value
+
+
+@dataclass(frozen=True)
+class _AsyncSshWriterAdapter:
+    writer: Any
+    channel: Any
+    session: Any
+
+    @classmethod
+    def from_writer(cls, writer: Any) -> _AsyncSshWriterAdapter:
+        return cls(
+            writer=writer,
+            channel=_required_asyncssh_attr(writer, "_chan"),
+            session=_required_asyncssh_attr(writer, "_session"),
+        )
+
+
 class SshTransport(BaseCustomTransport):
 
     def __init__(
@@ -36,15 +59,16 @@ class SshTransport(BaseCustomTransport):
         self._reader = reader
         self._writer = writer
         self._tuning = tuning
+        self._adapter = _AsyncSshWriterAdapter.from_writer(writer)
 
-        chan = writer._chan
+        chan = self._adapter.channel
         chan.set_write_buffer_limits(
             high=tuning.write_high_water,
             low=tuning.write_low_water,
         )
         self._chan = chan
 
-        self._session = writer._session
+        self._session = self._adapter.session
         self._orig_pause_writing = self._session.pause_writing
         self._orig_resume_writing = self._session.resume_writing
         self._session.pause_writing = self._on_pause_writing
