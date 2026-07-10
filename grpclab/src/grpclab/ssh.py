@@ -2,15 +2,16 @@ import asyncio
 import sys
 from typing import Optional
 
-from h2.config import H2Configuration
-from grpclib.config import Configuration
 from grpclib.protocol import H2Protocol
 from grpclib import client
-from grpclib.server import Handler as ServerHandler
-from grpclib.events import _DispatchServerEvents
-from grpclib.encoding.proto import ProtoCodec
 
-from grpclab.protocol import pump, BUF_HIGH, BUF_LOW
+from grpclab.protocol import (
+    pump,
+    BUF_HIGH,
+    BUF_LOW,
+    make_server_protocol,
+    build_mapping,
+)
 
 
 class SshTransport(asyncio.Transport):
@@ -87,34 +88,11 @@ class SshTransport(asyncio.Transport):
 
 
 
-def _make_h2_config(*, client_side: bool) -> H2Configuration:
-    return H2Configuration(
-        client_side=client_side,
-        header_encoding="ascii",
-        validate_inbound_headers=False,
-        validate_outbound_headers=False,
-        normalize_inbound_headers=False,
-        normalize_outbound_headers=False,
-    )
-
-
-def _make_server_protocol(
-    mapping: dict,
-) -> H2Protocol:
-    config = Configuration().__for_server__()
-    h2_config = _make_h2_config(client_side=False)
-    handler = ServerHandler(mapping, ProtoCodec(), None, _DispatchServerEvents())
-    return H2Protocol(handler, config, h2_config)
-
-
 async def serve_ssh(handlers: list, host: str = "127.0.0.1", port: int = 8022) -> None:
     import asyncssh
 
     key = asyncssh.generate_private_key("ssh-ed25519")
-
-    mapping = {}
-    for h in handlers:
-        mapping.update(h.__mapping__())
+    mapping = build_mapping(handlers)
 
     class _DemoSSHServer(asyncssh.SSHServer):
         def password_auth_supported(self):
@@ -127,7 +105,7 @@ async def serve_ssh(handlers: list, host: str = "127.0.0.1", port: int = 8022) -
         stdout = process.stdout
 
         transport = SshTransport(stdin, stdout)
-        protocol = _make_server_protocol(mapping)
+        protocol = make_server_protocol(mapping)
         protocol.connection_made(transport)
         transport._protocol = protocol
 

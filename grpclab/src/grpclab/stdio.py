@@ -3,15 +3,16 @@ import contextlib
 import sys
 from typing import Optional
 
-from h2.config import H2Configuration
-from grpclib.config import Configuration
 from grpclib.protocol import H2Protocol
 from grpclib import client
-from grpclib.server import Handler as ServerHandler
-from grpclib.events import _DispatchServerEvents
-from grpclib.encoding.proto import ProtoCodec
 
-from grpclab.protocol import pump, BUF_HIGH, BUF_LOW
+from grpclab.protocol import (
+    pump,
+    BUF_HIGH,
+    BUF_LOW,
+    make_server_protocol,
+    build_mapping,
+)
 
 
 class StreamReaderWriterTransport(asyncio.Transport):
@@ -142,29 +143,11 @@ async def _stdio_streams():
 
 
 async def serve_stdio(handlers: list) -> None:
-    mapping = {}
-    for h in handlers:
-        mapping.update(h.__mapping__())
-
-    config = Configuration().__for_server__()
-    h2_config = H2Configuration(
-        client_side=False,
-        header_encoding="ascii",
-        validate_inbound_headers=False,
-        validate_outbound_headers=False,
-        normalize_inbound_headers=False,
-        normalize_outbound_headers=False,
-    )
+    mapping = build_mapping(handlers)
 
     reader, writer, transport = await _stdio_streams()
 
-    handler = ServerHandler(
-        mapping,
-        ProtoCodec(),
-        None,
-        _DispatchServerEvents(),
-    )
-    protocol = H2Protocol(handler, config, h2_config)
+    protocol = make_server_protocol(mapping)
     protocol.connection_made(transport)
     transport._protocol = protocol
 

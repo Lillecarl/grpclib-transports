@@ -32,7 +32,12 @@ write-buffer high watermark (`BUF_HIGH` serves double duty).
 - Add a separate `READ_CHUNK` constant (same value as `BUF_HIGH` today, but
   semantically distinct) so future tuning is independent.
 
-**Status**: pending
+**Status**: done — Moved `make_h2_config`, `make_server_protocol`, and
+`build_mapping` into `protocol.py`. Added `READ_CHUNK` constant separate
+from `BUF_HIGH`. Removed duplicated inline H2 config from `stdio.py` and
+`_make_h2_config`/`_make_server_protocol` from `ssh.py`. Updated all test
+and benchmark imports. Also fixed the dead `EOFError` catch in `pump`
+(R2/Task 4 partial) as part of the rewrite.
 
 ---
 

@@ -8,8 +8,8 @@ import pytest
 from conftest import SMALL_PAYLOAD, LARGE_PAYLOAD, SMALL_COUNT, LARGE_COUNT, _bench, _run
 
 from grpclab.server import Greeter
-from grpclab.protocol import pump
-from grpclab.ssh import SshTransport, SshChannel, _make_server_protocol
+from grpclab.protocol import pump, make_server_protocol, build_mapping
+from grpclab.ssh import SshTransport, SshChannel
 
 
 @pytest.mark.parametrize("parallelism", [1, 2, 4, 8])
@@ -20,9 +20,7 @@ def test_ssh(parallelism):
 
     async def run():
         sock = tempfile.mktemp(suffix=".sock")
-        mapping = {}
-        for h in [Greeter()]:
-            mapping.update(h.__mapping__())
+        mapping = build_mapping([Greeter()])
         key = asyncssh.generate_private_key("ssh-ed25519")
         ssock = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
         ssock.bind(sock)
@@ -30,7 +28,7 @@ def test_ssh(parallelism):
 
         async def session_handler(process):
             t = SshTransport(process.stdin, process.stdout)
-            p = _make_server_protocol(mapping)
+            p = make_server_protocol(mapping)
             p.connection_made(t)
             t._protocol = p
             await pump(p, process.stdin)
