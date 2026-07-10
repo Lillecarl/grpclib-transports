@@ -1,4 +1,5 @@
 import asyncio
+import signal
 import sys
 from typing import Any, Optional
 
@@ -107,7 +108,7 @@ async def serve_ssh(handlers: list, host: str = "127.0.0.1", port: int = 8022) -
         print("[ssh-server] gRPC session started", file=sys.stderr)
         await pump(protocol, stdin)
 
-    await asyncssh.create_server(
+    acceptor = await asyncssh.create_server(
         _DemoSSHServer,
         host,
         port,
@@ -116,7 +117,21 @@ async def serve_ssh(handlers: list, host: str = "127.0.0.1", port: int = 8022) -
         encoding=None,
     )
     print(f"[ssh-server] listening on {host}:{port}", file=sys.stderr)
-    await asyncio.Event().wait()
+
+    loop = asyncio.get_running_loop()
+    stop = loop.create_future()
+    for sig in (signal.SIGINT, signal.SIGTERM):
+        loop.add_signal_handler(sig, lambda: _signal_stop(stop))
+    try:
+        await stop
+    finally:
+        acceptor.close()
+        await acceptor.wait_closed()
+
+
+def _signal_stop(stop: asyncio.Future[None]) -> None:
+    if not stop.done():
+        stop.set_result(None)
 
 
 class SshChannel(client.Channel):

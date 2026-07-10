@@ -205,7 +205,10 @@ matching `serve()` in `server.py` and close the asyncssh acceptor on shutdown.
 - The SSH server generates a key on every start; cleanup isn't needed for that.
 - The acceptor's `close()` + `wait_closed()` pattern mirrors the test cleanup.
 
-**Status**: pending
+**Status**: done — `serve_ssh` now captures the asyncssh acceptor, installs
+SIGINT/SIGTERM handlers, awaits a stop future, and closes the acceptor in a
+`finally` block. Replaced `await asyncio.Event().wait()` (which blocked
+forever) with proper shutdown. Tasks 8 and 9 combined.
 
 ---
 
@@ -220,7 +223,11 @@ If both fire, the second raises `InvalidStateError`. Guard with
 - Trivial fix but important for robustness in signal-heavy environments.
 - Apply the same guard in `serve_ssh` (Task 8) since it adds its own handlers.
 
-**Status**: pending
+**Status**: done — Added `_signal_stop(stop)` helper that guards with
+`if not stop.done()` before calling `set_result(None)`. Applied to both
+`serve()` in `server.py` and `serve_ssh()` in `ssh.py`. If both SIGINT and
+SIGTERM fire, the second call is now a no-op instead of raising
+`InvalidStateError`.
 
 ---
 
