@@ -32,16 +32,19 @@ class BaseCustomTransport(asyncio.Transport):
 
     def __init__(self) -> None:
         super().__init__()
-        self._protocol: H2Protocol | None = None
+        self._protocol: asyncio.BaseProtocol | None = None
         self._closing = False
 
     def is_closing(self) -> bool:
         return self._closing
 
-    def get_protocol(self) -> H2Protocol | None:
-        return self._protocol
+    def get_protocol(self) -> asyncio.BaseProtocol:
+        protocol = self._protocol
+        if protocol is None:
+            raise RuntimeError("protocol has not been set yet")
+        return protocol
 
-    def set_protocol(self, protocol: H2Protocol) -> None:
+    def set_protocol(self, protocol: asyncio.BaseProtocol) -> None:
         self._protocol = protocol
 
     def pause_reading(self) -> None:

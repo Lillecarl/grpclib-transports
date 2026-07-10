@@ -200,7 +200,7 @@ def _fmt_mb(v: float) -> str:
     return f"{v:>10.2f} MB/s"
 
 
-def pytest_terminal_summary(terminalreporter, _exitstatus, _config):
+def pytest_terminal_summary(terminalreporter, exitstatus, config):  # noqa: ARG001
     if not _bench_results:
         # Even if no results, print dump paths if we have them
         if _dump_paths:
