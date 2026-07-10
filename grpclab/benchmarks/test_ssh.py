@@ -7,7 +7,7 @@ import pytest
 
 from conftest import SMALL_PAYLOAD, LARGE_PAYLOAD, SMALL_COUNT, LARGE_COUNT, _bench, _run
 
-from grpclab.server import Greeter
+from grpclab.example.server import Greeter
 from grpclab.protocol import pump, make_server_protocol, build_mapping
 from grpclab.ssh import SshTransport, SshChannel
 

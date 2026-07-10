@@ -5,7 +5,7 @@ import os
 
 import asyncssh
 from demo import demo_grpc, demo_pb2
-from grpclab.server import Greeter
+from grpclab.example.server import Greeter
 from grpclab.ssh import SshTransport, SshChannel
 from grpclab.protocol import pump, make_server_protocol, build_mapping
 

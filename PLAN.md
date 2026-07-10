@@ -260,7 +260,24 @@ example/demo package. Restructure:
 - Keep unix-socket greet working by using `grpclib.Channel` directly in the
   example client.
 
-**Status**: pending
+**Status**: done — Restructured into library + example:
+
+- Created `grpclab/example/` subpackage with `server.py` (Greeter + serve)
+  and `client.py` (unified `greet(channel, name)` + `greet_unix` +
+  `greet_stdio` + `greet_ssh`).
+- Deleted old `server.py` and `client.py` from the library root.
+- Removed `greet_ssh` from `ssh.py` — it was demo code in the library.
+- `__init__.py` now exports the public API: `BaseCustomTransport`,
+  `StdioTransport`, `StdioChannel`, `SshTransport`, `SshChannel`,
+  `serve_stdio`, `serve_ssh`, `pump`, `build_mapping`, `make_h2_config`,
+  `make_server_protocol`, `signal_stop`, buffer constants.
+- `__main__.py` rewritten to import from `grpclab.example` — no more
+  `__import__("sys")` hack, proper `import sys` at top.
+- Moved `_signal_stop` to `protocol.py` as shared `signal_stop()`.
+- The `grpclab` library package no longer imports `demo` at all.
+- Updated all test and benchmark imports to use `grpclab.example.server`.
+- Three `greet_*` functions unified: `greet(channel, name)` does the stub
+  call + print; transport-specific wrappers create the channel and call it.
 
 ---
 

@@ -1,12 +1,14 @@
 import asyncio
 import argparse
+import sys
 
-from .server import serve, Greeter
-from .client import greet
-from .stdio import serve_stdio, StdioChannel, _stdio_streams
-from .ssh import serve_ssh, greet_ssh
 from grpclib.server import Server
-from demo import demo_grpc, demo_pb2
+
+from grpclab.stdio import serve_stdio
+from grpclab.ssh import serve_ssh
+
+from grpclab.example.server import Greeter, serve
+from grpclab.example.client import greet_unix, greet_stdio, greet_ssh
 
 
 async def run_internal(path: str) -> None:
@@ -14,20 +16,10 @@ async def run_internal(path: str) -> None:
     await server.start(path=path)
     print(f"[internal] server listening on {path}")
     try:
-        await greet(path)
+        await greet_unix(path)
     finally:
         server.close()
         await server.wait_closed()
-
-
-async def greet_stdio(name: str = "World") -> None:
-    reader, writer, transport = await _stdio_streams()
-    channel = StdioChannel(reader, writer, transport=transport)
-    stub = demo_grpc.GreeterStub(channel)
-    request = demo_pb2.HelloRequest(name=name)
-    print(f"[client] sending: SayHello(name={request.name!r})", file=__import__("sys").stderr)
-    response = await stub.SayHello(request)
-    print(f"[client] received: {response.message}", file=__import__("sys").stderr)
 
 
 def main() -> None:
@@ -68,7 +60,7 @@ def main() -> None:
         elif args.stdio:
             asyncio.run(greet_stdio())
         else:
-            asyncio.run(greet(args.unix_path or "/tmp/grpclab.sock"))
+            asyncio.run(greet_unix(args.unix_path or "/tmp/grpclab.sock"))
     elif args.command == "internal":
         asyncio.run(run_internal(args.unix_path))
 

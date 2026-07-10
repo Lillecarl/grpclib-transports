@@ -1,8 +1,11 @@
 import asyncio
 import signal
 import sys
+
 from grpclib.server import Server
 from demo import demo_pb2, demo_grpc
+
+from grpclab.protocol import signal_stop
 
 
 class Greeter(demo_grpc.GreeterBase):
@@ -23,14 +26,9 @@ async def serve(path: str) -> None:
 
     stop = loop.create_future()
     for sig in (signal.SIGINT, signal.SIGTERM):
-        loop.add_signal_handler(sig, lambda: _signal_stop(stop))
+        loop.add_signal_handler(sig, lambda: signal_stop(stop))
     try:
         await stop
     finally:
         server.close()
         await server.wait_closed()
-
-
-def _signal_stop(stop: asyncio.Future[None]) -> None:
-    if not stop.done():
-        stop.set_result(None)

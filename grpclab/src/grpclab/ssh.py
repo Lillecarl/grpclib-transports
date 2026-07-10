@@ -13,6 +13,7 @@ from grpclab.protocol import (
     BUF_LOW,
     make_server_protocol,
     build_mapping,
+    signal_stop,
 )
 
 
@@ -121,17 +122,12 @@ async def serve_ssh(handlers: list, host: str = "127.0.0.1", port: int = 8022) -
     loop = asyncio.get_running_loop()
     stop = loop.create_future()
     for sig in (signal.SIGINT, signal.SIGTERM):
-        loop.add_signal_handler(sig, lambda: _signal_stop(stop))
+        loop.add_signal_handler(sig, lambda: signal_stop(stop))
     try:
         await stop
     finally:
         acceptor.close()
         await acceptor.wait_closed()
-
-
-def _signal_stop(stop: asyncio.Future[None]) -> None:
-    if not stop.done():
-        stop.set_result(None)
 
 
 class SshChannel(client.Channel):
@@ -161,31 +157,3 @@ class SshChannel(client.Channel):
         if self._ssh_transport is not None:
             self._ssh_transport.close()
         self._ssh_writer.close()
-
-
-async def greet_ssh(
-    host: str = "127.0.0.1",
-    port: int = 8022,
-    username: str = "demo",
-    password: str = "demo",
-) -> None:
-    import asyncssh
-
-    async with asyncssh.connect(
-        host,
-        port,
-        username=username,
-        password=password,
-        known_hosts=None,
-    ) as conn:
-        stdin, stdout, stderr = await conn.open_session(encoding=None)
-        channel = SshChannel(stdout, stdin)
-        from demo import demo_grpc, demo_pb2
-        try:
-            stub = demo_grpc.GreeterStub(channel)
-            request = demo_pb2.HelloRequest(name="World")
-            print(f"[client] sending: SayHello(name={request.name!r})", file=sys.stderr)
-            response = await stub.SayHello(request)
-            print(f"[client] received: {response.message}", file=sys.stderr)
-        finally:
-            channel.close()

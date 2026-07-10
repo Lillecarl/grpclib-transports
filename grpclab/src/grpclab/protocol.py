@@ -88,3 +88,8 @@ def build_mapping(handlers: Sequence[IServable]) -> dict[str, Handler]:
     for h in handlers:
         mapping.update(h.__mapping__())
     return mapping
+
+
+def signal_stop(stop: asyncio.Future[None]) -> None:
+    if not stop.done():
+        stop.set_result(None)

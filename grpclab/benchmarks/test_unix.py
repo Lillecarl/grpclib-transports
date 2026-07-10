@@ -5,7 +5,7 @@ import pytest
 
 from conftest import SMALL_PAYLOAD, LARGE_PAYLOAD, SMALL_COUNT, LARGE_COUNT, _bench, _run
 
-from grpclab.server import Greeter
+from grpclab.example.server import Greeter
 from grpclib.server import Server as GrpcServer
 from grpclib.client import Channel
 

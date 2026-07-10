@@ -4,7 +4,7 @@ import os
 import socket
 
 from demo import demo_grpc, demo_pb2
-from grpclab.server import Greeter
+from grpclab.example.server import Greeter
 from grpclib.server import Server
 from grpclib.client import Channel
 
