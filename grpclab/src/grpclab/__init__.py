@@ -1,16 +1,31 @@
+from __future__ import annotations
+
 from grpclab.protocol import (
-    DEFAULT_TUNING,
-    BaseCustomTransport,
-    TransportTuning,
-    build_mapping,
-    make_h2_config,
-    make_server_protocol,
-    pump,
-    serve_h2,
-    signal_stop,
+    DEFAULT_TUNING as DEFAULT_TUNING,
+    BaseCustomTransport as BaseCustomTransport,
+    TransportTuning as TransportTuning,
+    build_mapping as build_mapping,
+    init_h2_transport as init_h2_transport,
+    install_h2_fast_receive_patch as install_h2_fast_receive_patch,
+    make_config as make_config,
+    make_h2_config as make_h2_config,
+    make_server_protocol as make_server_protocol,
+    pause_h2_protocol as pause_h2_protocol,
+    pump as pump,
+    resume_h2_protocol as resume_h2_protocol,
+    serve_h2 as serve_h2,
+    signal_stop as signal_stop,
 )
-from grpclab.ssh import SshChannel, SshTransport, serve_ssh
-from grpclab.stdio import StdioChannel, StdioTransport, serve_stdio
+from grpclab.ssh import (
+    SshChannel as SshChannel,
+    SshTransport as SshTransport,
+    serve_ssh as serve_ssh,
+)
+from grpclab.stdio import (
+    StdioChannel as StdioChannel,
+    StdioTransport as StdioTransport,
+    serve_stdio as serve_stdio,
+)
 
 __all__ = [
     "DEFAULT_TUNING",
@@ -21,9 +36,14 @@ __all__ = [
     "StdioChannel",
     "StdioTransport",
     "build_mapping",
+    "init_h2_transport",
+    "install_h2_fast_receive_patch",
+    "make_config",
     "make_h2_config",
     "make_server_protocol",
+    "pause_h2_protocol",
     "pump",
+    "resume_h2_protocol",
     "serve_h2",
     "serve_ssh",
     "serve_stdio",
