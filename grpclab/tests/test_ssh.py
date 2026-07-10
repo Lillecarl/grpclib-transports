@@ -29,19 +29,20 @@ def test_ssh_transport():
         sock.bind(sock_path)
         sock.listen(100)
 
-        async def session_handler(process):
-            transport = SshTransport(process.stdin, process.stdout)
+        async def session_handler(stdin, stdout, _stderr):
+            transport = SshTransport(stdin, stdout)
             protocol = make_server_protocol(mapping)
             protocol.connection_made(transport)
             transport._protocol = protocol
-            await pump(protocol, process.stdin)
+            await pump(protocol, stdin)
 
         acceptor = await asyncssh.listen(
             sock=sock,
             server_host_keys=[key],
             server_factory=_TestSSHServer,
-            process_factory=session_handler,
+            session_factory=session_handler,
             encoding=None,
+            line_editor=False,
             encryption_algs=[
                 "aes256-gcm@openssh.com", "aes128-gcm@openssh.com",
                 "aes256-ctr", "aes192-ctr", "aes128-ctr",

@@ -25,16 +25,16 @@ def test_ssh(parallelism):
         ssock.bind(sock)
         ssock.listen(100)
 
-        async def session_handler(process):
-            t = SshTransport(process.stdin, process.stdout)
+        async def session_handler(stdin, stdout, _stderr):
+            t = SshTransport(stdin, stdout)
             p = make_server_protocol(mapping)
             p.connection_made(t)
             t._protocol = p
-            await pump(p, process.stdin)
+            await pump(p, stdin)
 
         acceptor = await asyncssh.listen(
             sock=ssock, server_host_keys=[key], server_factory=_Server,
-            process_factory=session_handler, encoding=None,
+            session_factory=session_handler, encoding=None, line_editor=False,
             encryption_algs=[
                 "aes256-gcm@openssh.com", "aes128-gcm@openssh.com",
                 "aes256-ctr", "aes192-ctr", "aes128-ctr",

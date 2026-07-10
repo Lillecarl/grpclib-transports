@@ -98,10 +98,7 @@ async def serve_ssh(handlers: list, host: str = "127.0.0.1", port: int = 8022) -
         def validate_password(self, username: str, password: str) -> bool:
             return True
 
-    async def session_handler(process: asyncssh.SSHServerProcess) -> None:
-        stdin = process.stdin
-        stdout = process.stdout
-
+    async def session_handler(stdin, stdout, _stderr) -> None:
         transport = SshTransport(stdin, stdout)
         protocol = make_server_protocol(mapping)
         protocol.connection_made(transport)
@@ -114,8 +111,9 @@ async def serve_ssh(handlers: list, host: str = "127.0.0.1", port: int = 8022) -
         host,
         port,
         server_host_keys=[key],
-        process_factory=session_handler,
+        session_factory=session_handler,
         encoding=None,
+        line_editor=False,
     )
 
     loop = asyncio.get_running_loop()
