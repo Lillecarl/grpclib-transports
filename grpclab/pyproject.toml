@@ -1,0 +1,22 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "grpclab"
+version = "0.1.0"
+description = "gRPC lab demo CLI"
+authors = [
+    { name="Carl Andersson", email="github@lillecarl.com" }
+]
+requires-python = ">=3.12"
+dependencies = []
+
+[project.scripts]
+grpclab = "grpclab.__main__:main"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/grpclab"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
