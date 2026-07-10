@@ -13,13 +13,12 @@ from grpclab.protocol import (
     DEFAULT_TUNING,
     BaseCustomTransport,
     TransportTuning,
-    build_mapping,
     init_h2_transport,
     make_config,
-    make_server_protocol,
     pause_h2_protocol,
     pump,
     resume_h2_protocol,
+    serve_h2,
     signal_stop,
 )
 
@@ -135,7 +134,6 @@ async def serve_ssh(
     import asyncssh
 
     key = asyncssh.generate_private_key("ssh-ed25519")
-    mapping = build_mapping(handlers)
 
     class _DemoSSHServer(asyncssh.SSHServer):
         def password_auth_supported(self):
@@ -145,10 +143,7 @@ async def serve_ssh(
 
     async def session_handler(stdin, stdout, _stderr) -> None:
         transport = SshTransport(stdin, stdout, tuning=tuning)
-        protocol = make_server_protocol(mapping, tuning=tuning)
-        init_h2_transport(protocol, transport, tuning=tuning)
-
-        await pump(protocol, stdin, tuning=tuning)
+        await serve_h2(handlers, stdin, transport, tuning=tuning)
 
     acceptor = await asyncssh.create_server(
         _DemoSSHServer,

@@ -6,6 +6,7 @@ from grpclab.protocol import (
     make_h2_config,
     make_server_protocol,
     pump,
+    serve_h2,
     signal_stop,
 )
 from grpclab.ssh import SshChannel, SshTransport, serve_ssh
@@ -23,6 +24,7 @@ __all__ = [
     "make_h2_config",
     "make_server_protocol",
     "pump",
+    "serve_h2",
     "serve_ssh",
     "serve_stdio",
     "signal_stop",

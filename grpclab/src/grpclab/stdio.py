@@ -12,13 +12,12 @@ from grpclab.protocol import (
     DEFAULT_TUNING,
     BaseCustomTransport,
     TransportTuning,
-    build_mapping,
     init_h2_transport,
     make_config,
-    make_server_protocol,
     pause_h2_protocol,
     pump,
     resume_h2_protocol,
+    serve_h2,
 )
 
 
@@ -105,15 +104,10 @@ async def serve_stdio(
     *,
     tuning: TransportTuning = DEFAULT_TUNING,
 ) -> None:
-    mapping = build_mapping(handlers)
-
     reader, _writer, transport = await _stdio_streams(tuning=tuning)
 
-    protocol = make_server_protocol(mapping, tuning=tuning)
-    init_h2_transport(protocol, transport, tuning=tuning)
-
     with contextlib.redirect_stdout(sys.stderr):
-        await pump(protocol, reader, tuning=tuning)
+        await serve_h2(handlers, reader, transport, tuning=tuning)
 
 
 class StdioChannel(client.Channel):

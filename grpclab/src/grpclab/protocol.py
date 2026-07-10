@@ -192,6 +192,19 @@ async def pump(
         protocol.connection_lost(exc)
 
 
+async def serve_h2(
+    handlers: Sequence[IServable],
+    reader: Any,
+    transport: Any,
+    *,
+    tuning: TransportTuning = DEFAULT_TUNING,
+) -> None:
+    mapping = build_mapping(handlers)
+    protocol = make_server_protocol(mapping, tuning=tuning)
+    init_h2_transport(protocol, transport, tuning=tuning)
+    await pump(protocol, reader, tuning=tuning)
+
+
 def make_h2_config(*, client_side: bool) -> H2Configuration:
     return H2Configuration(
         client_side=client_side,
