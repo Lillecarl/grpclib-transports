@@ -40,6 +40,7 @@ class StdioTransport(BaseCustomTransport):
         return self._writer.get_extra_info(name, default)
 
     def abort(self) -> None:
+        # Pipes have no hard abort — close() is the best we can do.
         self._closing = True
         self._writer.close()
 

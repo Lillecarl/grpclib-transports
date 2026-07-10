@@ -160,7 +160,10 @@ but document that stdio abort is best-effort.
 - `asyncio.Transport.abort()` signature returns `None`.
 - Don't break the `_closing` flag logic.
 
-**Status**: pending
+**Status**: done — `SshTransport.abort()` was already using
+`self._writer.abort()` (asyncssh hard reset). Added a comment on
+`StdioTransport.abort()` noting that pipes have no hard abort so `close()`
+is the best we can do. No code change needed for SSH.
 
 ---
 
