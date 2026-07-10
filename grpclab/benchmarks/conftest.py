@@ -36,8 +36,22 @@ LARGE_PAYLOAD = os.urandom(LARGE_SIZE)
 DUMP_DIR = Path.cwd() / ".bench-dumps"
 DUMP_DIR.mkdir(parents=True, exist_ok=True)
 
-TIMEOUT = 30
-BENCH_SAMPLES = 3
+
+def _env_int(name: str, default: int) -> int:
+    raw = os.environ.get(name)
+    if raw is None:
+        return default
+    try:
+        value = int(raw)
+    except ValueError as e:
+        raise ValueError(f"{name} must be an integer") from e
+    if value <= 0:
+        raise ValueError(f"{name} must be positive")
+    return value
+
+
+TIMEOUT = _env_int("GRPCLAB_BENCH_TIMEOUT", 30)
+BENCH_SAMPLES = _env_int("GRPCLAB_BENCH_SAMPLES", 3)
 PROFILE_BENCHMARKS = os.environ.get("GRPCLAB_BENCH_PROFILE") == "1"
 
 _bench_results: list[dict] = []
