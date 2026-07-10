@@ -20,6 +20,17 @@ class Greeter(demo_grpc.GreeterBase):
         reply = demo_pb2.HelloReply(message=f"Hello, {request.name}!")
         await stream.send_message(reply)
 
+    @typing.override
+    async def Upload(self, stream):
+        total = 0
+        while True:
+            request = await stream.recv_message()
+            if request is None:
+                break
+            total += len(request.payload)
+        reply = demo_pb2.HelloReply(message=f"Uploaded {total} bytes")
+        await stream.send_message(reply)
+
 
 async def serve(path: str) -> None:
     loop = asyncio.get_running_loop()
