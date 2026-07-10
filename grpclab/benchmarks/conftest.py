@@ -6,6 +6,7 @@ import fcntl
 import io
 import os
 import re
+import statistics
 import time
 import traceback
 from pathlib import Path
@@ -36,6 +37,7 @@ DUMP_DIR = Path.cwd() / ".bench-dumps"
 DUMP_DIR.mkdir(parents=True, exist_ok=True)
 
 TIMEOUT = 30
+BENCH_SAMPLES = 3
 
 _bench_results: list[dict] = []
 _dump_paths: list[Path] = []
@@ -95,9 +97,7 @@ def _dump_profile(label: str, path_to_timeline: str) -> Path:
     return path
 
 
-async def _bench(label, payload, count, channel, parallelism=1):
-    stub = demo_grpc.GreeterStub(channel)
-    req = demo_pb2.HelloRequest(name="bench", payload=payload)
+async def _bench_once(stub, req, count, parallelism=1):
     start = 0.0
 
     if parallelism == 1:
@@ -125,7 +125,17 @@ async def _bench(label, payload, count, channel, parallelism=1):
         workers = [asyncio.create_task(worker()) for _ in range(parallelism)]
         await asyncio.gather(*workers)
 
-    elapsed = time.perf_counter() - start
+    return time.perf_counter() - start
+
+
+async def _bench(label, payload, count, channel, parallelism=1):
+    stub = demo_grpc.GreeterStub(channel)
+    req = demo_pb2.HelloRequest(name="bench", payload=payload)
+    samples = [
+        await _bench_once(stub, req, count, parallelism=parallelism)
+        for _ in range(BENCH_SAMPLES)
+    ]
+    elapsed = statistics.median(samples)
     _report(label, count, elapsed, len(payload))
 
 
