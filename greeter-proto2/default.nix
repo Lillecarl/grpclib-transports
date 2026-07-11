@@ -44,6 +44,7 @@ buildPythonPackage {
       --python_betterproto2_out=src/greeter2 \
       --python_betterproto2_opt=client_generation=async \
       --python_betterproto2_opt=server_generation=async \
+      --python_betterproto2_opt=google_protobuf_descriptors \
       common.proto \
       server.proto \
       worker.proto
