@@ -21,6 +21,7 @@ from grpclib_transports.protocol import (
     serve_h2 as serve_h2,
     signal_stop as signal_stop,
 )
+from grpclib_transports.server import Server as Server
 from grpclib_transports.ssh import (
     SshChannel as SshChannel,
     SshTransport as SshTransport,
@@ -38,6 +39,7 @@ __all__ = [
     "BaseCustomTransport",
     "PeerIdentity",
     "TransportTuning",
+    "Server",
     "SshChannel",
     "SshTransport",
     "StdioChannel",

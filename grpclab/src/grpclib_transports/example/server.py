@@ -5,9 +5,9 @@ import signal
 import typing
 
 from demo import demo_grpc, demo_pb2
-from grpclib.server import Server
 
-from grpclib_transports.protocol import make_config, signal_stop
+from grpclib_transports.protocol import signal_stop
+from grpclib_transports.server import Server
 
 
 class Greeter(demo_grpc.GreeterBase):
@@ -34,8 +34,8 @@ class Greeter(demo_grpc.GreeterBase):
 
 async def serve(path: str) -> None:
     loop = asyncio.get_running_loop()
-    server = Server([Greeter()], config=make_config())
-    await server.start(path=path)
+    server = Server([Greeter()])
+    await server.start_unix(path)
 
     stop = loop.create_future()
     for sig in (signal.SIGINT, signal.SIGTERM):
