@@ -7,8 +7,7 @@ import os
 
 from greeter import common_pb2, server_grpc, worker_grpc
 from grpclib_transports.example.server import Greeter, WorkerGreeter
-from grpclib_transports.multiprocessing import multiprocessing_pipe_pair
-from grpclib_transports.multiprocessing import multiprocessing_worker
+from grpclib_transports.multiprocessing import multiprocessing_pipe_pair, multiprocessing_worker
 from grpclib_transports.pipes import (
     PipeChannel,
     pipe_streams_from_fds,

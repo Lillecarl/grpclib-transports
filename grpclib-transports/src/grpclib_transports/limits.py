@@ -4,13 +4,12 @@ from __future__ import annotations
 
 import asyncio
 import functools
-from collections.abc import Collection
 from typing import TYPE_CHECKING, Any, cast
 
 from grpclib.const import Handler
 
 if TYPE_CHECKING:
-    from collections.abc import Awaitable, Callable
+    from collections.abc import Awaitable, Callable, Collection
 
     from grpclib._typing import IServable
 
@@ -28,7 +27,7 @@ class ConcurrencyLimitedService:
         self._semaphore = semaphore
         self._mapping: dict[str, Handler] = {}
         for method, handler in service.__mapping__().items():
-            raw_handler = cast(Any, handler)
+            raw_handler = cast("Any", handler)
             func = cast("Callable[[Any], Awaitable[Any]]", raw_handler.func)
             self._mapping[method] = Handler(
                 func=self._wrap(func),

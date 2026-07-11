@@ -2,10 +2,10 @@ import contextlib
 import os
 import socket
 import tempfile
-from pathlib import Path
 from typing import Any
 
 import asyncssh
+from anyio import Path
 from greeter import common_pb2, server_grpc, worker_grpc
 from grpclib_transports.example.server import Greeter, WorkerGreeter
 from grpclib_transports.protocol import DEFAULT_TUNING, serve_h2
@@ -23,7 +23,7 @@ class _TestSSHServer(asyncssh.SSHServer):
 async def test_ssh_transport() -> None:
     fd, sock_path = tempfile.mkstemp(suffix=".sock")
     os.close(fd)
-    Path(sock_path).unlink()
+    await Path(sock_path).unlink()
 
     try:
         key = asyncssh.generate_private_key("ssh-ed25519")  # pyright: ignore[reportUnknownMemberType] -- asyncssh type stubs are incomplete
@@ -80,13 +80,13 @@ async def test_ssh_transport() -> None:
             await acceptor.wait_closed()
     finally:
         with contextlib.suppress(OSError):
-            Path(sock_path).unlink()
+            await Path(sock_path).unlink()
 
 
 async def test_ssh_stdio_command_transport() -> None:
     fd, sock_path = tempfile.mkstemp(suffix=".sock")
     os.close(fd)
-    Path(sock_path).unlink()
+    await Path(sock_path).unlink()
 
     try:
         key = asyncssh.generate_private_key("ssh-ed25519")  # pyright: ignore[reportUnknownMemberType] -- asyncssh type stubs are incomplete
@@ -126,4 +126,4 @@ async def test_ssh_stdio_command_transport() -> None:
             await acceptor.wait_closed()
     finally:
         with contextlib.suppress(OSError):
-            Path(sock_path).unlink()
+            await Path(sock_path).unlink()
