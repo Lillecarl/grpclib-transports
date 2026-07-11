@@ -13,6 +13,8 @@ from pathlib import Path
 from demo import demo_grpc, demo_pb2
 from grpclib_transports.protocol import DEFAULT_TUNING
 from grpclib_transports.stdio import _bump_subprocess_pipe_buffers
+from rich.console import Console
+from rich.table import Table
 
 logging.getLogger("h2").setLevel(logging.WARNING)
 logging.getLogger("asyncssh").setLevel(logging.WARNING)
@@ -281,11 +283,11 @@ def _run(label, coro):
 
 
 def _fmt_msgs(v: float) -> str:
-    return f"{v:>10.0f} msgs/s"
+    return f"{v:,.0f} msgs/s"
 
 
 def _fmt_mb(v: float) -> str:
-    return f"{v:>10.2f} MB/s"
+    return f"{v:,.2f} MB/s"
 
 
 def _fmt_spread(sample_rates: list[float]) -> str:
@@ -293,17 +295,48 @@ def _fmt_spread(sample_rates: list[float]) -> str:
     low = min(sample_rates)
     median = statistics.median(sample_rates)
     if median == 0:
-        return f"{'0.0%':>14}"
-    return f"{((high - low) / median * 100):>13.1f}%"
+        return "0.0%"
+    return f"{(high - low) / median * 100:.1f}%"
 
 
 def _fmt_ms(v: float) -> str:
-    return f"{v:>10.2f} ms"
+    return f"{v:,.2f} ms"
+
+
+_console = Console(highlight=False)
+
+
+def _build_throughput_table(test_type: str, rows: list[dict]) -> Table:
+    transports = sorted({r["transport"] for r in rows})
+    parallelisms = sorted({r["parallelism"] for r in rows})
+    cols = ["Transport"] + [f"p={p}" for p in parallelisms]
+    heading = f"{test_type.upper()} ({rows[0]['count']} x {rows[0]['payload_size']} B)"
+    table = Table(*cols, title=heading)
+    table.columns[0].no_wrap = True
+    table.columns[0].min_width = max(len(t) for t in transports)
+    for col in table.columns[1:]:
+        col.no_wrap = True
+    for t in transports:
+        vals: list[str] = [t]
+        for p in parallelisms:
+            match = next(
+                (r for r in rows if r["transport"] == t and r["parallelism"] == p), None
+            )
+            if match:
+                if match["payload_size"]:
+                    thr = _fmt_mb(match["mb_per_sec"])
+                else:
+                    thr = _fmt_msgs(match["msgs_per_sec"])
+                spread = _fmt_spread(match["sample_rates"])
+                vals.append(f"{thr}\n{spread}")
+            else:
+                vals.append("N/A")
+        table.add_row(*vals)
+    return table
 
 
 def pytest_terminal_summary(terminalreporter, exitstatus, config):  # noqa: ARG001
     if not _bench_results and not _latency_results:
-        # Even if no results, print dump paths if we have them
         if _dump_paths:
             terminalreporter.section("Diagnostic Dumps", bold=True, yellow=True)
             for p in _dump_paths:
@@ -311,94 +344,44 @@ def pytest_terminal_summary(terminalreporter, exitstatus, config):  # noqa: ARG0
         return
 
     if _bench_results:
-        terminalreporter.section("Benchmark Summary", bold=True, blue=True)
+        mainstream = [r for r in _bench_results if r["type"] in ("small", "large")]
+        sweep = [r for r in _bench_results if r["type"] not in ("small", "large")]
 
         for test_type in _bench_types():
-            rows = [r for r in _bench_results if r["type"] == test_type]
+            rows = [r for r in mainstream if r["type"] == test_type]
             if not rows:
                 continue
+            _console.print()
+            _console.print(_build_throughput_table(test_type, rows))
 
-            transports = sorted({r["transport"] for r in rows})
-            parallelisms = sorted({r["parallelism"] for r in rows})
-
-            heading = f"{test_type.upper()} ({rows[0]['count']} x {rows[0]['payload_size']} B)"
-            terminalreporter.write_line(f"\n{heading}\n")
-
-            header = f"{'Transport':<12}" + "".join(f"  {f'p={p}':>14}" for p in parallelisms)
-            terminalreporter.write_line(header)
-            terminalreporter.write_line("-" * len(header))
-
-            for t in transports:
-                line = f"{t:<12}"
-                for p in parallelisms:
-                    match = next((r for r in rows if r["transport"] == t and r["parallelism"] == p), None)
-                    if match:
-                        fmt = _fmt_mb if match["payload_size"] else _fmt_msgs
-                        line += "  " + fmt(match["mb_per_sec"] if match["payload_size"] else match["msgs_per_sec"])
-                    else:
-                        line += f"  {'N/A':>14}"
-                terminalreporter.write_line(line)
-
-    if _latency_results:
-        terminalreporter.section("Lifecycle Benchmark Summary", bold=True, blue=True)
-        types = sorted({r["type"] for r in _latency_results})
-        for test_type in types:
-            rows = [r for r in _latency_results if r["type"] == test_type]
-            terminalreporter.write_line(f"\n{test_type.upper()} ({rows[0]['count']} workers/sample)\n")
-            header = f"{'Transport':<18}  {'median':>14}"
-            terminalreporter.write_line(header)
-            terminalreporter.write_line("-" * len(header))
-            for row in sorted(rows, key=lambda r: r["transport"]):
-                terminalreporter.write_line(
-                    f"{row['transport']:<18}  {_fmt_ms(row['ms_per_op'])}"
+        if sweep:
+            _console.print()
+            table = Table("Transport", "Throughput", "Spread", title="PAYLOAD SWEEP & STREAMING")
+            for r in sorted(sweep, key=lambda r: (r["transport"], r["type"])):
+                fmt = _fmt_mb if r["payload_size"] else _fmt_msgs
+                val = r["mb_per_sec"] if r["payload_size"] else r["msgs_per_sec"]
+                table.add_row(
+                    f"{r['transport']}  {r['type']}",
+                    fmt(val),
+                    _fmt_spread(r["sample_rates"]),
                 )
-
-    if _bench_results:
-        terminalreporter.section("Benchmark Spread", bold=True, blue=True)
-        terminalreporter.write_line(
-            f"Relative sample range across {BENCH_SAMPLES} samples; lower is steadier."
-        )
-
-        for test_type in _bench_types():
-            rows = [r for r in _bench_results if r["type"] == test_type]
-            if not rows:
-                continue
-
-            transports = sorted({r["transport"] for r in rows})
-            parallelisms = sorted({r["parallelism"] for r in rows})
-
-            terminalreporter.write_line(f"\n{test_type.upper()}\n")
-            header = f"{'Transport':<12}" + "".join(f"  {f'p={p}':>14}" for p in parallelisms)
-            terminalreporter.write_line(header)
-            terminalreporter.write_line("-" * len(header))
-
-            for t in transports:
-                line = f"{t:<12}"
-                for p in parallelisms:
-                    match = next((r for r in rows if r["transport"] == t and r["parallelism"] == p), None)
-                    if match:
-                        line += "  " + _fmt_spread(match["sample_rates"])
-                    else:
-                        line += f"  {'N/A':>14}"
-                terminalreporter.write_line(line)
+            _console.print(table)
 
     if _latency_results:
-        terminalreporter.section("Lifecycle Benchmark Spread", bold=True, blue=True)
-        terminalreporter.write_line(
-            f"Relative sample range across {BENCH_SAMPLES} samples; lower is steadier."
-        )
+        _console.print()
+        table = Table("Transport", "median", "spread")
         for test_type in sorted({r["type"] for r in _latency_results}):
-            terminalreporter.write_line(f"\n{test_type.upper()}\n")
-            header = f"{'Transport':<18}  {'spread':>14}"
-            terminalreporter.write_line(header)
-            terminalreporter.write_line("-" * len(header))
-            for row in sorted(
-                [r for r in _latency_results if r["type"] == test_type],
-                key=lambda r: r["transport"],
-            ):
-                terminalreporter.write_line(
-                    f"{row['transport']:<18}  {_fmt_spread(row['sample_ms_per_op'])}"
+            rows = [r for r in _latency_results if r["type"] == test_type]
+            heading = f"{test_type.upper()} ({rows[0]['count']} workers/sample)"
+            table.add_section()
+            table.columns[0].header = heading
+            for row in sorted(rows, key=lambda r: r["transport"]):
+                table.add_row(
+                    row["transport"],
+                    _fmt_ms(row["ms_per_op"]),
+                    _fmt_spread(row["sample_ms_per_op"]),
                 )
+        _console.print(table)
 
     if _dump_paths:
         terminalreporter.section("Diagnostic Dumps", bold=True, yellow=True)

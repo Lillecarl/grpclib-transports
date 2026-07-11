@@ -1,14 +1,19 @@
 {
   lib,
-  buildPythonApplication,
+  # build
+  buildPythonPackage,
   hatchling,
+  # deps
   proto,
   grpclib,
   h2,
   asyncssh ? null,
+  # test inputs
+  rich,
+  anyio,
   pytestCheckHook,
 }:
-buildPythonApplication {
+buildPythonPackage {
   pname = "grpclib-transports";
   version = "0.1.0";
   pyproject = true;
@@ -21,10 +26,13 @@ buildPythonApplication {
     proto
     grpclib
     h2
-  ] ++ lib.optional (asyncssh != null) asyncssh;
+  ]
+  ++ lib.optional (asyncssh != null) asyncssh;
 
   nativeCheckInputs = [
     pytestCheckHook
+    anyio
+    rich
   ];
 
   meta = {
