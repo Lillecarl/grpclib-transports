@@ -2,12 +2,36 @@ from __future__ import annotations
 
 from typing import Any
 
-from grpclib_transports import LogicalRpcPeer, Server, WorkerHost
+import greeter.greeter.common as common_pb2
+import greeter.greeter.worker as worker_grpc
+from grpclib_transports import LogicalRpcPeer, Server, WorkerBackchannel, WorkerHost
 from grpclib_transports.example.server import Greeter
 
 
 async def _peer_factory(_channel: Any) -> LogicalRpcPeer:
     raise AssertionError("pool construction must not start workers")
+
+
+class WorkerThatCallsManager(worker_grpc.GreeterWorkerBase):
+    def __init__(self, backchannel: WorkerBackchannel) -> None:
+        self._backchannel = backchannel
+
+    async def say_hello(self, message: common_pb2.HelloRequest) -> common_pb2.HelloReply:
+        lookup = await self._backchannel.call_unary(
+            "/greeter.worker.GreeterManager/Lookup",
+            common_pb2.ManagerLookupRequest(key=message.name),
+            common_pb2.ManagerLookupReply,
+        )
+        return common_pb2.HelloReply(message=lookup.value)
+
+
+def _worker_services_with_manager(backchannel: WorkerBackchannel) -> list[WorkerThatCallsManager]:
+    return [WorkerThatCallsManager(backchannel)]
+
+
+class GreeterManager(worker_grpc.GreeterManagerBase):
+    async def lookup(self, message: common_pb2.ManagerLookupRequest) -> common_pb2.ManagerLookupReply:
+        return common_pb2.ManagerLookupReply(value=f"manager:{message.key}")
 
 
 async def test_server_for_workers_creates_worker_host() -> None:
@@ -32,3 +56,18 @@ async def test_worker_host_creates_stdio_pool_with_count() -> None:
         )
 
         assert len(pool) == 0
+
+
+async def test_multiprocessing_worker_can_call_parent_services() -> None:
+    async with Server() as server:
+        host = server.endpoint([GreeterManager()]).for_workers()
+
+        async with host.multiprocessing_channels(
+            _worker_services_with_manager,
+            client_factory=worker_grpc.GreeterWorkerStub,
+            preload=["greeter"],
+        ) as pool:
+            stub = pool[0].client
+            response = await stub.say_hello(common_pb2.HelloRequest(name="alpha"))
+
+        assert response.message == "manager:alpha"

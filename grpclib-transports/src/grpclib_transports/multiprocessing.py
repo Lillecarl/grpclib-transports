@@ -12,10 +12,12 @@ from typing import Any
 
 from grpclib._typing import IServable
 
+from grpclib_transports.control import WorkerBackchannel, open_parent_control_peer
 from grpclib_transports.pipes import PipeChannel, pipe_streams_from_fds
 from grpclib_transports.protocol import DEFAULT_TUNING, TransportTuning, serve_h2
 
 ServiceFactory = Callable[[], Collection[IServable]]
+BackchannelServiceFactory = Callable[[WorkerBackchannel], Collection[IServable]]
 _PROCESS_CLOSE_TIMEOUT = 3.0
 
 
@@ -150,6 +152,24 @@ def _run_multiprocessing_worker(
     asyncio.run(run())
 
 
+def _run_multiprocessing_worker_with_backchannel(
+    endpoint: MultiprocessingPipeEndpoint,
+    service_factory: BackchannelServiceFactory,
+    tuning: TransportTuning,
+    max_concurrency: int | None,
+) -> None:
+    async def run() -> None:
+        backchannel = WorkerBackchannel()
+        await serve_multiprocessing_endpoint(
+            endpoint,
+            (*service_factory(backchannel), backchannel.service()),
+            tuning=tuning,
+            max_concurrency=max_concurrency,
+        )
+
+    asyncio.run(run())
+
+
 async def _stop_process(proc: Any) -> None:
     if proc.is_alive():
         proc.terminate()
@@ -185,6 +205,40 @@ async def multiprocessing_worker(
     pair.close_parent_connections()
     try:
         yield channel
+    finally:
+        await channel.aclose()
+        await _stop_process(proc)
+
+
+@contextlib.asynccontextmanager
+async def multiprocessing_worker_with_backchannel(
+    service_factory: BackchannelServiceFactory,
+    parent_services: Collection[IServable],
+    *,
+    context: Any | None = None,
+    preload: Sequence[str] = (),
+    tuning: TransportTuning = DEFAULT_TUNING,
+    max_concurrency: int | None = None,
+) -> AsyncGenerator[PipeChannel]:
+    """Start a forkserver worker with an in-band parent-services backchannel.
+
+    The yielded channel lets the parent call services hosted by the worker.
+    ``parent_services`` are exposed to the worker over a long-lived
+    bidirectional control stream on that same channel.
+    """
+    pair = multiprocessing_pipe_pair(context=context, preload=preload)
+    proc = pair.context.Process(
+        target=_run_multiprocessing_worker_with_backchannel,
+        args=(pair.child, service_factory, tuning, max_concurrency),
+    )
+    proc.start()
+    pair.close_child_connections()
+
+    channel = await pair.parent.open_channel(tuning=tuning)
+    pair.close_parent_connections()
+    try:
+        async with open_parent_control_peer(channel, parent_services):
+            yield channel
     finally:
         await channel.aclose()
         await _stop_process(proc)

@@ -18,6 +18,21 @@ from grpclib_transports.client import (
 from grpclib_transports.client import (
     connect_unix as connect_unix,
 )
+from grpclib_transports.control import (
+    ControlFrame as ControlFrame,
+)
+from grpclib_transports.control import (
+    ControlPlaneBase as ControlPlaneBase,
+)
+from grpclib_transports.control import (
+    ControlPlaneStub as ControlPlaneStub,
+)
+from grpclib_transports.control import (
+    GrpcServiceDispatcher as GrpcServiceDispatcher,
+)
+from grpclib_transports.control import (
+    WorkerBackchannel as WorkerBackchannel,
+)
 from grpclib_transports.limits import (
     ConcurrencyLimitedService as ConcurrencyLimitedService,
 )
@@ -41,6 +56,9 @@ from grpclib_transports.multiprocessing import (
 )
 from grpclib_transports.multiprocessing import (
     multiprocessing_worker as multiprocessing_worker,
+)
+from grpclib_transports.multiprocessing import (
+    multiprocessing_worker_with_backchannel as multiprocessing_worker_with_backchannel,
 )
 from grpclib_transports.multiprocessing import (
     serve_multiprocessing_endpoint as serve_multiprocessing_endpoint,
@@ -172,7 +190,11 @@ __all__ = [
     "DEFAULT_TUNING",
     "BaseCustomTransport",
     "ConcurrencyLimitedService",
+    "ControlFrame",
+    "ControlPlaneBase",
+    "ControlPlaneStub",
     "Endpoint",
+    "GrpcServiceDispatcher",
     "LogicalFrame",
     "LogicalRpcPeer",
     "ManagedWorker",
@@ -193,6 +215,7 @@ __all__ = [
     "StdioPeerPool",
     "StdioTransport",
     "TransportTuning",
+    "WorkerBackchannel",
     "WorkerHost",
     "WorkerPool",
     "build_mapping",
@@ -213,6 +236,7 @@ __all__ = [
     "make_server_protocol",
     "multiprocessing_pipe_pair",
     "multiprocessing_worker",
+    "multiprocessing_worker_with_backchannel",
     "pause_h2_protocol",
     "peer_identity_from_stream",
     "peer_identity_from_transport",

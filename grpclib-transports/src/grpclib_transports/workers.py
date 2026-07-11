@@ -6,10 +6,15 @@ import contextlib
 import itertools
 from collections.abc import Awaitable, Callable, Iterator, Mapping, Sequence
 from dataclasses import dataclass, field
-from typing import TYPE_CHECKING, Any, TypeVar
+from typing import TYPE_CHECKING, Any, TypeVar, cast
 
 from grpclib_transports.bidi import LogicalRpcPeer
-from grpclib_transports.multiprocessing import ServiceFactory, multiprocessing_worker
+from grpclib_transports.multiprocessing import (
+    BackchannelServiceFactory,
+    ServiceFactory,
+    multiprocessing_worker,
+    multiprocessing_worker_with_backchannel,
+)
 from grpclib_transports.protocol import DEFAULT_TUNING, TransportTuning
 from grpclib_transports.stdio import StdioChannel, stdio_worker
 
@@ -234,10 +239,8 @@ class WorkerPool[ClientT = Any]:
 class WorkerHost:
     """Server-owned factory for managed worker pools.
 
-    ``parent_services`` are the services workers are allowed to call on the
-    parent side of a future backchannel protocol.  The current pool API still
-    accepts a peer factory so consumers can define their own frame/schema
-    bridge while the transport lifecycle API stabilizes.
+    ``parent_services`` are exposed to workers over an in-band control stream
+    on the same gRPC connection used for parent-to-worker calls.
     """
 
     def __init__(
@@ -302,7 +305,7 @@ class WorkerHost:
     @contextlib.asynccontextmanager
     async def multiprocessing_channels[ClientT = Any](
         self,
-        service_factory: ServiceFactory,
+        service_factory: ServiceFactory | BackchannelServiceFactory,
         *,
         client_factory: ClientFactory[ClientT] | None = None,
         count: int = 1,
@@ -314,13 +317,25 @@ class WorkerHost:
 
         async with WorkerPool[ClientT]() as pool:
             for index in range(count):
-                await pool.add(
-                    multiprocessing_worker(
-                        service_factory,
+                if self.parent_services:
+                    manager = multiprocessing_worker_with_backchannel(
+                        cast(BackchannelServiceFactory, service_factory),
+                        self.parent_services,
                         preload=preload,
                         tuning=self.tuning,
                         max_concurrency=max_concurrency,
-                    ),
+                    )
+                else:
+                    if not callable(service_factory):
+                        raise TypeError("service_factory must be callable")
+                    manager = multiprocessing_worker(
+                        cast(ServiceFactory, service_factory),
+                        preload=preload,
+                        tuning=self.tuning,
+                        max_concurrency=max_concurrency,
+                    )
+                await pool.add(
+                    manager,
                     worker_id=f"multiprocessing-{index + 1}",
                     client_factory=client_factory,
                     metadata={"transport": "multiprocessing", "index": index},
