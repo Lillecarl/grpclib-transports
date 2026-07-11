@@ -10,6 +10,12 @@ from grpclib_transports.client import (
     connect_tcp as connect_tcp,
     connect_unix as connect_unix,
 )
+from grpclib_transports.multiprocessing import (
+    MultiprocessingPipeEndpoint as MultiprocessingPipeEndpoint,
+    MultiprocessingPipePair as MultiprocessingPipePair,
+    get_forkserver_context as get_forkserver_context,
+    multiprocessing_pipe_pair as multiprocessing_pipe_pair,
+)
 from grpclib_transports.pipes import (
     PipeChannel as PipeChannel,
     PipeTransport as PipeTransport,
@@ -65,6 +71,8 @@ __all__ = [
     "BaseCustomTransport",
     "LogicalFrame",
     "LogicalRpcPeer",
+    "MultiprocessingPipeEndpoint",
+    "MultiprocessingPipePair",
     "PeerClosedError",
     "PeerIdentity",
     "PeerRegistry",
@@ -82,6 +90,7 @@ __all__ = [
     "build_mapping",
     "connect_tcp",
     "connect_unix",
+    "get_forkserver_context",
     "connect_ssh",
     "init_h2_transport",
     "install_h2_fast_receive_patch",
@@ -92,6 +101,7 @@ __all__ = [
     "make_config",
     "make_h2_config",
     "make_server_protocol",
+    "multiprocessing_pipe_pair",
     "pause_h2_protocol",
     "peer_identity_from_stream",
     "peer_identity_from_transport",
