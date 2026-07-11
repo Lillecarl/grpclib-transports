@@ -113,6 +113,9 @@ from grpclib_transports.ssh import (
     connect_ssh as connect_ssh,
 )
 from grpclib_transports.ssh import (
+    connect_ssh_stdio as connect_ssh_stdio,
+)
+from grpclib_transports.ssh import (
     is_ssh_available as is_ssh_available,
 )
 from grpclib_transports.ssh import (
@@ -137,6 +140,9 @@ from grpclib_transports.transfer import (
     iter_file_chunks as iter_file_chunks,
 )
 from grpclib_transports.workers import (
+    ManagedWorker as ManagedWorker,
+)
+from grpclib_transports.workers import (
     PeerRegistry as PeerRegistry,
 )
 from grpclib_transports.workers import (
@@ -148,6 +154,9 @@ from grpclib_transports.workers import (
 from grpclib_transports.workers import (
     WorkerHost as WorkerHost,
 )
+from grpclib_transports.workers import (
+    WorkerPool as WorkerPool,
+)
 
 __all__ = [
     "DEFAULT_TUNING",
@@ -156,6 +165,7 @@ __all__ = [
     "LogicalRpcPeer",
     "MultiprocessingPipeEndpoint",
     "MultiprocessingPipePair",
+    "ManagedWorker",
     "PeerClosedError",
     "PeerIdentity",
     "PeerRegistry",
@@ -171,8 +181,10 @@ __all__ = [
     "StdioTransport",
     "TransportTuning",
     "WorkerHost",
+    "WorkerPool",
     "build_mapping",
     "connect_ssh",
+    "connect_ssh_stdio",
     "connect_tcp",
     "connect_unix",
     "get_forkserver_context",

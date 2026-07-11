@@ -287,3 +287,43 @@ async def connect_ssh(
             yield channel
         finally:
             await channel.aclose()
+
+
+@contextlib.asynccontextmanager
+async def connect_ssh_stdio(
+    host: str,
+    command: str,
+    port: int = 22,
+    *,
+    username: str | None = None,
+    password: str | None = None,
+    known_hosts: Any = None,
+    tuning: TransportTuning = DEFAULT_TUNING,
+    **kwargs: Any,
+) -> AsyncGenerator[SshChannel]:
+    """Execute *command* over SSH and speak gRPC over its stdin/stdout.
+
+    This is the OpenSSH-compatible deployment mode: the remote command is a
+    stdio gRPC worker process, and SSH only provides the encrypted byte stream.
+    """
+    asyncssh = _load_asyncssh()
+    async with asyncssh.connect(
+        host,
+        port,
+        username=username,
+        password=password,
+        known_hosts=known_hosts,
+        **kwargs,
+    ) as conn:
+        proc = await conn.create_process(command, encoding=None)
+        channel = SshChannel(proc.stdout, proc.stdin, tuning=tuning)
+        try:
+            yield channel
+        finally:
+            await channel.aclose()
+            proc.terminate()
+            with contextlib.suppress(asyncio.TimeoutError):
+                await asyncio.wait_for(proc.wait(), 3)
+            if proc.returncode is None:
+                proc.kill()
+                await proc.wait()

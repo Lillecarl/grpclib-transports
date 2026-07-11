@@ -9,17 +9,20 @@ from dataclasses import dataclass, field
 from typing import TYPE_CHECKING, Any, TypeVar
 
 from grpclib_transports.bidi import LogicalRpcPeer
+from grpclib_transports.multiprocessing import ServiceFactory, multiprocessing_worker
 from grpclib_transports.protocol import DEFAULT_TUNING, TransportTuning
 from grpclib_transports.stdio import StdioChannel, stdio_worker
 
 if TYPE_CHECKING:
-    from collections.abc import Collection
+    from collections.abc import AsyncGenerator, Collection
     from pathlib import Path
 
     from grpclib._typing import IServable
 
 PeerT = TypeVar("PeerT", bound=LogicalRpcPeer)
 PeerFactory = Callable[[StdioChannel], Awaitable[PeerT]]
+ClientT = TypeVar("ClientT")
+ClientFactory = Callable[[Any], ClientT]
 
 
 @dataclass(frozen=True)
@@ -168,6 +171,66 @@ class StdioPeerPool[PeerT: LogicalRpcPeer]:
         await self._stack.aclose()
 
 
+@dataclass(frozen=True)
+class ManagedWorker[ClientT = Any]:
+    """A managed worker channel and optional typed client."""
+
+    id: str
+    channel: Any
+    client: ClientT
+    metadata: Mapping[str, Any] = field(default_factory=dict)  # pyright: ignore[reportUnknownVariableType] -- dict() satisfies Mapping[str, Any] at runtime
+
+
+class WorkerPool[ClientT = Any]:
+    """A pool of managed worker channels.
+
+    Use as an async context manager. Worker transports are entered through
+    an internal :class:`contextlib.AsyncExitStack`, so channels and child
+    processes are closed when the pool exits.
+    """
+
+    def __init__(self) -> None:
+        self._stack = contextlib.AsyncExitStack()
+        self._workers: list[ManagedWorker[ClientT]] = []
+
+    def __len__(self) -> int:
+        return len(self._workers)
+
+    def __iter__(self) -> Iterator[ManagedWorker[ClientT]]:
+        return iter(self._workers)
+
+    def __getitem__(self, index: int) -> ManagedWorker[ClientT]:
+        return self._workers[index]
+
+    def snapshot(self) -> tuple[ManagedWorker[ClientT], ...]:
+        return tuple(self._workers)
+
+    async def add(
+        self,
+        manager: Any,
+        *,
+        worker_id: str,
+        client_factory: ClientFactory[ClientT] | None = None,
+        metadata: Mapping[str, Any] | None = None,
+    ) -> ManagedWorker[ClientT]:
+        channel = await self._stack.enter_async_context(manager)
+        client = client_factory(channel) if client_factory is not None else channel
+        worker = ManagedWorker(
+            id=worker_id,
+            channel=channel,
+            client=client,
+            metadata=metadata or {},
+        )
+        self._workers.append(worker)
+        return worker
+
+    async def __aenter__(self) -> WorkerPool[ClientT]:
+        return self
+
+    async def __aexit__(self, *exc_info: Any) -> None:
+        await self._stack.aclose()
+
+
 class WorkerHost:
     """Server-owned factory for managed worker pools.
 
@@ -205,3 +268,59 @@ class WorkerHost:
             env=env,
             stderr=stderr,
         )
+
+    @contextlib.asynccontextmanager
+    async def stdio_channels[ClientT = Any](
+        self,
+        argv: Sequence[str | Path],
+        *,
+        client_factory: ClientFactory[ClientT] | None = None,
+        count: int = 1,
+        cwd: str | Path | None = None,
+        env: Mapping[str, str] | None = None,
+        stderr: Any = None,
+    ) -> AsyncGenerator[WorkerPool[ClientT]]:
+        if count <= 0:
+            raise ValueError("count must be positive")
+
+        async with WorkerPool[ClientT]() as pool:
+            for index in range(count):
+                await pool.add(
+                    stdio_worker(
+                        argv,
+                        tuning=self.tuning,
+                        cwd=cwd,
+                        env=env,
+                        stderr=stderr,
+                    ),
+                    worker_id=f"stdio-{index + 1}",
+                    client_factory=client_factory,
+                    metadata={"transport": "stdio", "index": index},
+                )
+            yield pool
+
+    @contextlib.asynccontextmanager
+    async def multiprocessing_channels[ClientT = Any](
+        self,
+        service_factory: ServiceFactory,
+        *,
+        client_factory: ClientFactory[ClientT] | None = None,
+        count: int = 1,
+        preload: Sequence[str] = (),
+    ) -> AsyncGenerator[WorkerPool[ClientT]]:
+        if count <= 0:
+            raise ValueError("count must be positive")
+
+        async with WorkerPool[ClientT]() as pool:
+            for index in range(count):
+                await pool.add(
+                    multiprocessing_worker(
+                        service_factory,
+                        preload=preload,
+                        tuning=self.tuning,
+                    ),
+                    worker_id=f"multiprocessing-{index + 1}",
+                    client_factory=client_factory,
+                    metadata={"transport": "multiprocessing", "index": index},
+                )
+            yield pool
