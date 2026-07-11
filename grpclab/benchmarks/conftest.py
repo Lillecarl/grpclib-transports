@@ -4,6 +4,7 @@ import asyncio
 import contextlib
 import fcntl
 import io
+import logging
 import os
 import re
 import statistics
@@ -11,9 +12,11 @@ import time
 import traceback
 from pathlib import Path
 
-import grpclib_transports._logging  # noqa: F401
 from demo import demo_grpc, demo_pb2
 from grpclib_transports.protocol import DEFAULT_TUNING
+
+logging.getLogger("h2").setLevel(logging.WARNING)
+logging.getLogger("asyncssh").setLevel(logging.WARNING)
 
 
 def _bump_pipe_buf(proc: asyncio.subprocess.Process) -> None:

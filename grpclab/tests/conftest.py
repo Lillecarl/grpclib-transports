@@ -1,1 +1,4 @@
-import grpclib_transports._logging  # noqa: F401
+import logging
+
+logging.getLogger("h2").setLevel(logging.WARNING)
+logging.getLogger("asyncssh").setLevel(logging.WARNING)
