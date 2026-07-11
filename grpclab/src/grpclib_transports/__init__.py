@@ -29,6 +29,7 @@ from grpclib_transports.server import Server as Server
 from grpclib_transports.ssh import (
     SshChannel as SshChannel,
     SshTransport as SshTransport,
+    connect_ssh as connect_ssh,
     is_ssh_available as is_ssh_available,
     serve_ssh as serve_ssh,
 )
@@ -52,6 +53,7 @@ __all__ = [
     "build_mapping",
     "connect_tcp",
     "connect_unix",
+    "connect_ssh",
     "init_h2_transport",
     "install_h2_fast_receive_patch",
     "is_ssh_available",

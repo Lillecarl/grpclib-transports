@@ -4,6 +4,7 @@ import asyncio
 import contextlib
 import importlib.util
 import signal
+from collections.abc import AsyncIterator
 from dataclasses import dataclass
 from typing import Any
 
@@ -235,3 +236,31 @@ class SshChannel(client.Channel):
         if wait_closed is not None:
             with contextlib.suppress(ConnectionError, OSError):
                 await wait_closed()
+
+
+@contextlib.asynccontextmanager
+async def connect_ssh(
+    host: str,
+    port: int = 22,
+    *,
+    username: str | None = None,
+    password: str | None = None,
+    known_hosts: Any = None,
+    tuning: TransportTuning = DEFAULT_TUNING,
+    **kwargs: Any,
+) -> AsyncIterator[SshChannel]:
+    asyncssh = _load_asyncssh()
+    async with asyncssh.connect(
+        host,
+        port,
+        username=username,
+        password=password,
+        known_hosts=known_hosts,
+        **kwargs,
+    ) as conn:
+        stdin, stdout, _stderr = await conn.open_session(encoding=None)
+        channel = SshChannel(stdout, stdin, tuning=tuning)
+        try:
+            yield channel
+        finally:
+            await channel.aclose()

@@ -5,7 +5,7 @@ from typing import Any
 from demo import demo_grpc, demo_pb2
 
 from grpclib_transports.client import connect_unix
-from grpclib_transports.ssh import SshChannel, _load_asyncssh
+from grpclib_transports.ssh import connect_ssh
 from grpclib_transports.stdio import StdioChannel, _stdio_streams
 
 
@@ -36,18 +36,11 @@ async def greet_ssh(
     password: str = "demo",
     name: str = "World",
 ) -> None:
-    asyncssh = _load_asyncssh()
-
-    async with asyncssh.connect(
+    async with connect_ssh(
         host,
         port,
         username=username,
         password=password,
         known_hosts=None,
-    ) as conn:
-        stdin, stdout, _stderr = await conn.open_session(encoding=None)
-        channel = SshChannel(stdout, stdin)
-        try:
-            await greet(channel, name)
-        finally:
-            channel.close()
+    ) as channel:
+        await greet(channel, name)
