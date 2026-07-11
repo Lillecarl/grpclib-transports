@@ -2,9 +2,10 @@ from __future__ import annotations
 
 import asyncio
 import os
+from typing import Any
 
 import pytest
-from conftest import LARGE_COUNT, LARGE_PAYLOAD, SMALL_COUNT, SMALL_PAYLOAD, _bench, _run
+from conftest import LARGE_COUNT, LARGE_PAYLOAD, SMALL_COUNT, SMALL_PAYLOAD, bench, run_bench
 from grpclib_transports.example.server import Greeter
 from grpclib_transports.multiprocessing import (
     MultiprocessingPipeEndpoint,
@@ -27,7 +28,7 @@ def _serve_multiprocessing_worker(endpoint: MultiprocessingPipeEndpoint) -> None
     asyncio.run(run())
 
 
-async def _stop_process(proc) -> None:
+async def _stop_process(proc: Any) -> None:
     if proc.is_alive():
         proc.terminate()
         await asyncio.to_thread(proc.join, 3)
@@ -37,7 +38,7 @@ async def _stop_process(proc) -> None:
 
 
 @pytest.mark.parametrize("parallelism", [1, 2, 4, 8])
-def test_multiprocessing(parallelism):
+def test_multiprocessing(parallelism: int) -> None:
     async def run():
         pair = multiprocessing_pipe_pair()
         proc = pair.context.Process(
@@ -50,14 +51,14 @@ def test_multiprocessing(parallelism):
         channel = await pair.parent.open_channel()
         pair.close_parent_connections()
         try:
-            await _bench(
+            await bench(
                 f"multiprocessing (small, p={parallelism})",
                 SMALL_PAYLOAD,
                 SMALL_COUNT,
                 channel,
                 parallelism=parallelism,
             )
-            await _bench(
+            await bench(
                 f"multiprocessing (large, p={parallelism})",
                 LARGE_PAYLOAD,
                 LARGE_COUNT,
@@ -68,4 +69,4 @@ def test_multiprocessing(parallelism):
             await channel.aclose()
             await _stop_process(proc)
 
-    _run(f"multiprocessing (p={parallelism})", run())
+    run_bench(f"multiprocessing (p={parallelism})", run())

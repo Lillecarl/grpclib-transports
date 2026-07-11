@@ -4,20 +4,24 @@ Run with::
 
     python docs/examples/unix_example.py
 """
+
 from __future__ import annotations
 
 import asyncio
 import contextlib
+import os
 import tempfile
 
-import anyio
+from anyio import Path
 from greeter import greeter_grpc, greeter_pb2
 from grpclib_transports import Server, connect_unix
 from grpclib_transports.example.server import Greeter
 
 
 async def main() -> None:
-    sock = tempfile.mktemp(suffix=".sock")
+    fd, sock = tempfile.mkstemp(suffix=".sock")
+    os.close(fd)
+    await Path(sock).unlink()
     server = Server([Greeter()])
     await server.start_unix(sock)
     channel = None
@@ -33,7 +37,7 @@ async def main() -> None:
         server.close()
         await server.wait_closed()
         with contextlib.suppress(OSError):
-            await anyio.Path(sock).unlink()
+            await Path(sock).unlink()
 
 
 if __name__ == "__main__":

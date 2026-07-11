@@ -2,12 +2,12 @@ import asyncio
 import sys
 
 import pytest
-from conftest import LARGE_COUNT, LARGE_PAYLOAD, SMALL_COUNT, SMALL_PAYLOAD, _bench, _bump_pipe_buf, _run
+from conftest import LARGE_COUNT, LARGE_PAYLOAD, SMALL_COUNT, SMALL_PAYLOAD, bench, bump_pipe_buf, run_bench
 from grpclib_transports.stdio import StdioChannel
 
 
 @pytest.mark.parametrize("parallelism", [1, 2, 4, 8])
-def test_stdio(parallelism):
+def test_stdio(parallelism: int) -> None:
     async def run():
         proc = await asyncio.create_subprocess_exec(
             sys.executable,
@@ -19,15 +19,11 @@ def test_stdio(parallelism):
             stdout=asyncio.subprocess.PIPE,
             stderr=asyncio.subprocess.PIPE,
         )
-        _bump_pipe_buf(proc)
+        bump_pipe_buf(proc)
         channel = StdioChannel(proc.stdout, proc.stdin)
         try:
-            await _bench(
-                f"stdio (small, p={parallelism})", SMALL_PAYLOAD, SMALL_COUNT, channel, parallelism=parallelism
-            )
-            await _bench(
-                f"stdio (large, p={parallelism})", LARGE_PAYLOAD, LARGE_COUNT, channel, parallelism=parallelism
-            )
+            await bench(f"stdio (small, p={parallelism})", SMALL_PAYLOAD, SMALL_COUNT, channel, parallelism=parallelism)
+            await bench(f"stdio (large, p={parallelism})", LARGE_PAYLOAD, LARGE_COUNT, channel, parallelism=parallelism)
         finally:
             await channel.aclose()
             proc.kill()
@@ -35,4 +31,4 @@ def test_stdio(parallelism):
             if serr:
                 pass
 
-    _run(f"stdio (p={parallelism})", run())
+    run_bench(f"stdio (p={parallelism})", run())

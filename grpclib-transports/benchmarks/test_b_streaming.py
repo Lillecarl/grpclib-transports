@@ -7,10 +7,11 @@ import statistics
 import sys
 import tempfile
 import time
+from typing import Any
 
-import anyio
 import pytest
-from conftest import BENCH_SAMPLES, _bump_pipe_buf, _report, _run
+from anyio import Path
+from conftest import BENCH_SAMPLES, bump_pipe_buf, report_bench, run_bench
 from greeter import greeter_grpc, greeter_pb2
 from grpclib.client import Channel
 from grpclib_transports.protocol import DEFAULT_TUNING, make_config
@@ -26,23 +27,23 @@ UPLOAD_MESSAGES = [
 ]
 
 
-async def _upload_once(stub) -> None:
+async def _upload_once(stub: Any) -> None:
     response = await stub.Upload(UPLOAD_MESSAGES)
     assert response.message == f"Uploaded {TOTAL_SIZE} bytes"
 
 
-async def _bench_upload(label, channel) -> None:
+async def _bench_upload(label: str, channel: Any) -> None:
     stub = greeter_grpc.GreeterStub(channel)
     await _upload_once(stub)
 
-    samples = []
+    samples: list[float] = []
     for _ in range(BENCH_SAMPLES):
         start = time.monotonic()
         for _ in range(UPLOAD_COUNT):
             await _upload_once(stub)
         samples.append(time.monotonic() - start)
 
-    _report(
+    report_bench(
         label,
         UPLOAD_COUNT,
         statistics.median(samples),
@@ -52,7 +53,7 @@ async def _bench_upload(label, channel) -> None:
 
 
 @pytest.mark.parametrize("transport", ["stdio", "unixproc"])
-def test_streaming_upload_8mib(transport):
+def test_streaming_upload_8mib(transport: str) -> None:
     async def run_stdio():
         proc = await asyncio.create_subprocess_exec(
             sys.executable,
@@ -64,7 +65,7 @@ def test_streaming_upload_8mib(transport):
             stdout=asyncio.subprocess.PIPE,
             stderr=asyncio.subprocess.PIPE,
         )
-        _bump_pipe_buf(proc)
+        bump_pipe_buf(proc)
         channel = StdioChannel(proc.stdout, proc.stdin)
         try:
             await _bench_upload("stdio (stream8MiB, p=1)", channel)
@@ -76,7 +77,9 @@ def test_streaming_upload_8mib(transport):
             await proc.wait()
 
     async def run_unixproc():
-        sock = tempfile.mktemp(suffix=".sock")
+        fd, sock = tempfile.mkstemp(suffix=".sock")
+        os.close(fd)
+        await Path(sock).unlink()
         proc = await asyncio.create_subprocess_exec(
             sys.executable,
             "-m",
@@ -92,7 +95,7 @@ def test_streaming_upload_8mib(transport):
         channel = None
         try:
             for _ in range(100):
-                if await anyio.Path(sock).exists():
+                if await Path(sock).exists():
                     break
                 await asyncio.sleep(0.01)
             channel = Channel(path=sock, config=make_config())
@@ -105,9 +108,9 @@ def test_streaming_upload_8mib(transport):
                 await asyncio.wait_for(proc.stderr.read(), timeout=3)
             await proc.wait()
             with contextlib.suppress(OSError):
-                await anyio.Path(sock).unlink()
+                await Path(sock).unlink()
 
     if transport == "stdio":
-        _run("stdio (stream8MiB, p=1)", run_stdio())
+        run_bench("stdio (stream8MiB, p=1)", run_stdio())
     else:
-        _run("unixproc (stream8MiB, p=1)", run_unixproc())
+        run_bench("unixproc (stream8MiB, p=1)", run_unixproc())

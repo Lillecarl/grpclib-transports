@@ -103,11 +103,11 @@ async def pipe_streams(
 
         def pause_writing(self) -> None:
             if transport_ref:
-                pause_h2_protocol(transport_ref[0]._protocol)
+                pause_h2_protocol(transport_ref[0].get_protocol())
 
         def resume_writing(self) -> None:
             if transport_ref:
-                resume_h2_protocol(transport_ref[0]._protocol)
+                resume_h2_protocol(transport_ref[0].get_protocol())
 
         def connection_lost(self, exc: Exception | None) -> None:
             if self._closed.done():
@@ -165,8 +165,8 @@ class PipeChannel(client.Channel):
         tuning: TransportTuning = DEFAULT_TUNING,
         **kwargs: Any,
     ) -> None:
-        kwargs.setdefault("config", make_config(tuning))
-        super().__init__(host="pipe", port=0, **kwargs)
+        config = kwargs.pop("config", make_config(tuning))
+        super().__init__(host="pipe", port=0, config=config, **kwargs)  # pyright: ignore[reportUnknownMemberType] -- grpclib Channel ssl param has Unknown in type stubs
         self._pipe_reader = reader
         self._pipe_writer = writer
         self._pipe_transport = transport

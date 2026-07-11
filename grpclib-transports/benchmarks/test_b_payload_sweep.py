@@ -6,9 +6,9 @@ import os
 import sys
 import tempfile
 
-import anyio
 import pytest
-from conftest import _bench, _bump_pipe_buf, _run
+from anyio import Path
+from conftest import bench, bump_pipe_buf, run_bench
 from grpclib.client import Channel
 from grpclib_transports.protocol import make_config
 from grpclib_transports.stdio import StdioChannel
@@ -21,7 +21,7 @@ PAYLOAD_CASES = {
 
 
 @pytest.mark.parametrize("payload_label", PAYLOAD_CASES)
-def test_stdio_payload_sweep(payload_label):
+def test_stdio_payload_sweep(payload_label: str) -> None:
     async def run():
         payload, count = PAYLOAD_CASES[payload_label]
         proc = await asyncio.create_subprocess_exec(
@@ -34,10 +34,10 @@ def test_stdio_payload_sweep(payload_label):
             stdout=asyncio.subprocess.PIPE,
             stderr=asyncio.subprocess.PIPE,
         )
-        _bump_pipe_buf(proc)
+        bump_pipe_buf(proc)
         channel = StdioChannel(proc.stdout, proc.stdin)
         try:
-            await _bench(f"stdio ({payload_label}, p=1)", payload, count, channel)
+            await bench(f"stdio ({payload_label}, p=1)", payload, count, channel)
         finally:
             await channel.aclose()
             proc.kill()
@@ -45,14 +45,16 @@ def test_stdio_payload_sweep(payload_label):
                 await asyncio.wait_for(proc.stderr.read(), timeout=3)
             await proc.wait()
 
-    _run(f"stdio ({payload_label}, p=1)", run())
+    run_bench(f"stdio ({payload_label}, p=1)", run())
 
 
 @pytest.mark.parametrize("payload_label", PAYLOAD_CASES)
-def test_unixproc_payload_sweep(payload_label):
+def test_unixproc_payload_sweep(payload_label: str) -> None:
     async def run():
         payload, count = PAYLOAD_CASES[payload_label]
-        sock = tempfile.mktemp(suffix=".sock")
+        fd, sock = tempfile.mkstemp(suffix=".sock")
+        os.close(fd)
+        await Path(sock).unlink()
         proc = await asyncio.create_subprocess_exec(
             sys.executable,
             "-m",
@@ -68,11 +70,11 @@ def test_unixproc_payload_sweep(payload_label):
         channel = None
         try:
             for _ in range(100):
-                if await anyio.Path(sock).exists():
+                if await Path(sock).exists():
                     break
                 await asyncio.sleep(0.01)
             channel = Channel(path=sock, config=make_config())
-            await _bench(f"unixproc ({payload_label}, p=1)", payload, count, channel)
+            await bench(f"unixproc ({payload_label}, p=1)", payload, count, channel)
         finally:
             if channel is not None:
                 channel.close()
@@ -81,6 +83,6 @@ def test_unixproc_payload_sweep(payload_label):
                 await asyncio.wait_for(proc.stderr.read(), timeout=3)
             await proc.wait()
             with contextlib.suppress(OSError):
-                await anyio.Path(sock).unlink()
+                await Path(sock).unlink()
 
-    _run(f"unixproc ({payload_label}, p=1)", run())
+    run_bench(f"unixproc ({payload_label}, p=1)", run())

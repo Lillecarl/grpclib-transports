@@ -19,7 +19,7 @@ from typing import TYPE_CHECKING, Any
 
 from grpclib.config import Configuration
 from grpclib.encoding.proto import ProtoCodec
-from grpclib.events import _DispatchServerEvents
+from grpclib.events import _DispatchServerEvents  # pyright: ignore[reportPrivateUsage] -- grpclib internal API
 from grpclib.protocol import H2Protocol
 from grpclib.server import Handler as ServerHandler
 from h2.config import H2Configuration
@@ -78,37 +78,39 @@ def _env_size(name: str, default: int) -> int:
     return value
 
 
-_H2_FAST_RECEIVE_PATCH_INSTALLED = False
+_h2_fast_receive_patch_installed = False
 
 
-def _receive_frame_without_trace_repr(
+# This entire function is a deliberate monkey-patch of h2 internals to avoid
+# expensive trace-logging frame representations.  All pyright ignores below
+# are for intentional access to h2 private members that have no public API.
+def _receive_frame_without_trace_repr(  # pyright: ignore[reportPrivateUsage]
     self: H2Connection,
     frame: Any,
 ) -> list[Any]:
-    events: list
     try:
-        frames, events = self._frame_dispatch_table[frame.__class__](frame)
+        frames, events = self._frame_dispatch_table[frame.__class__](frame)  # pyright: ignore[reportPrivateUsage,reportUnknownMemberType,reportUnknownVariableType,reportUnknownArgumentType]
     except StreamClosedError as e:
-        if self._stream_is_closed_by_reset(e.stream_id):
+        if self._stream_is_closed_by_reset(e.stream_id):  # pyright: ignore[reportPrivateUsage]
             f = RstStreamFrame(e.stream_id)
             f.error_code = e.error_code
-            self._prepare_for_sending([f])
-            events = e._events
+            self._prepare_for_sending([f])  # pyright: ignore[reportPrivateUsage]
+            events = e._events  # pyright: ignore[reportPrivateUsage,reportUnknownMemberType]
         else:
             raise
     except StreamIDTooLowError as e:
-        if self._stream_is_closed_by_reset(e.stream_id):
+        if self._stream_is_closed_by_reset(e.stream_id):  # pyright: ignore[reportPrivateUsage]
             f = RstStreamFrame(e.stream_id)
             f.error_code = ErrorCodes.STREAM_CLOSED
-            self._prepare_for_sending([f])
+            self._prepare_for_sending([f])  # pyright: ignore[reportPrivateUsage]
             events = []
-        elif self._stream_is_closed_by_end(e.stream_id):
+        elif self._stream_is_closed_by_end(e.stream_id):  # pyright: ignore[reportPrivateUsage]
             raise StreamClosedError(e.stream_id) from e
         else:
             raise
     else:
-        self._prepare_for_sending(frames)
-    return events
+        self._prepare_for_sending(frames)  # pyright: ignore[reportPrivateUsage,reportUnknownArgumentType]
+    return events  # pyright: ignore[reportUnknownVariableType]
 
 
 def install_h2_fast_receive_patch() -> None:
@@ -118,16 +120,16 @@ def install_h2_fast_receive_patch() -> None:
     no-ops.  Raises :exc:`RuntimeError` if the ``h2`` internals have changed
     in a way the patch cannot handle.
     """
-    global _H2_FAST_RECEIVE_PATCH_INSTALLED
+    global _h2_fast_receive_patch_installed
 
-    if _H2_FAST_RECEIVE_PATCH_INSTALLED:
+    if _h2_fast_receive_patch_installed:
         return
 
-    params = tuple(inspect.signature(H2Connection._receive_frame).parameters)
+    params = tuple(inspect.signature(H2Connection._receive_frame).parameters)  # pyright: ignore[reportPrivateUsage]
     if params != ("self", "frame"):
         raise RuntimeError(f"Unsupported h2 H2Connection._receive_frame signature: {params!r}")
-    H2Connection._receive_frame = _receive_frame_without_trace_repr
-    _H2_FAST_RECEIVE_PATCH_INSTALLED = True
+    H2Connection._receive_frame = _receive_frame_without_trace_repr  # pyright: ignore[reportPrivateUsage]
+    _h2_fast_receive_patch_installed = True
 
 
 install_h2_fast_receive_patch()
@@ -443,7 +445,7 @@ def make_server_protocol(
     """Build a server-side H2 protocol with the given handler mapping."""
     config = make_config(tuning).__for_server__()
     h2_config = make_h2_config(client_side=False)
-    handler = ServerHandler(mapping, ProtoCodec(), None, _DispatchServerEvents())
+    handler = ServerHandler(mapping, ProtoCodec(), None, _DispatchServerEvents())  # pyright: ignore[reportPrivateUsage] -- grpclib internal API
     return H2Protocol(handler, config, h2_config)
 
 
@@ -456,7 +458,7 @@ def init_h2_transport(
     """Wire an H2 protocol to a transport and advertise a tuned max frame size."""
     transport.set_protocol(protocol)
     protocol.connection_made(transport)
-    protocol.connection._connection.update_settings(
+    protocol.connection._connection.update_settings(  # pyright: ignore[reportPrivateUsage] -- h2 internal attribute
         {
             SettingCodes.MAX_FRAME_SIZE: tuning.http2_max_frame_size,
         }

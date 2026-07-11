@@ -3,8 +3,9 @@ from __future__ import annotations
 import asyncio
 import os
 import sys
+from typing import Any
 
-from conftest import STARTUP_COUNT, _bench_lifecycle, _run
+from conftest import STARTUP_COUNT, bench_lifecycle, run_bench
 from greeter import greeter_grpc, greeter_pb2
 from grpclib_transports.example.server import Greeter
 from grpclib_transports.multiprocessing import (
@@ -29,7 +30,7 @@ def _serve_multiprocessing_worker(endpoint: MultiprocessingPipeEndpoint) -> None
     asyncio.run(run())
 
 
-async def _stop_process(proc) -> None:
+async def _stop_process(proc: Any) -> None:
     if proc.is_alive():
         proc.terminate()
         await asyncio.to_thread(proc.join, 3)
@@ -72,21 +73,21 @@ async def _multiprocessing_lifecycle() -> None:
 
 def test_stdio_worker_lifecycle():
     async def run() -> None:
-        await _bench_lifecycle(
+        await bench_lifecycle(
             "stdio (lifecycle)",
             STARTUP_COUNT,
             _stdio_lifecycle,
         )
 
-    _run("stdio lifecycle", run())
+    run_bench("stdio lifecycle", run())
 
 
 def test_multiprocessing_worker_lifecycle():
     async def run() -> None:
-        await _bench_lifecycle(
+        await bench_lifecycle(
             "multiprocessing (lifecycle)",
             STARTUP_COUNT,
             _multiprocessing_lifecycle,
         )
 
-    _run("multiprocessing lifecycle", run())
+    run_bench("multiprocessing lifecycle", run())

@@ -7,6 +7,7 @@ Run with::
 
     python docs/examples/bidi_example.py
 """
+
 from __future__ import annotations
 
 import asyncio

@@ -1,8 +1,10 @@
 import asyncio
 import contextlib
+import os
 import socket
 import tempfile
 from pathlib import Path
+from typing import Any
 
 import asyncssh
 from greeter import greeter_grpc, greeter_pb2
@@ -15,22 +17,24 @@ class _TestSSHServer(asyncssh.SSHServer):
     def password_auth_supported(self):
         return True
 
-    def validate_password(self, username, password):
+    def validate_password(self, username: str, password: str):
         return True
 
 
 def test_ssh_transport():
-    sock_path = tempfile.mktemp(suffix=".sock")
+    fd, sock_path = tempfile.mkstemp(suffix=".sock")
+    os.close(fd)
+    Path(sock_path).unlink()
 
     async def run():
-        key = asyncssh.generate_private_key("ssh-ed25519")
+        key = asyncssh.generate_private_key("ssh-ed25519")  # pyright: ignore[reportUnknownMemberType] -- asyncssh type stubs are incomplete
         sock = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
         sock.setsockopt(socket.SOL_SOCKET, socket.SO_SNDBUF, DEFAULT_TUNING.buffer_size)
         sock.setsockopt(socket.SOL_SOCKET, socket.SO_RCVBUF, DEFAULT_TUNING.buffer_size)
         sock.bind(sock_path)
         sock.listen(100)
 
-        async def session_handler(stdin, stdout, _stderr):
+        async def session_handler(stdin: Any, stdout: Any, _stderr: Any):
             transport = SshTransport(stdin, stdout)
             await serve_h2([Greeter()], stdin, transport)
 

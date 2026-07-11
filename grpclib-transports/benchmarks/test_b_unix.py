@@ -1,11 +1,12 @@
 import asyncio
 import contextlib
+import os
 import sys
 import tempfile
 
-import anyio
 import pytest
-from conftest import LARGE_COUNT, LARGE_PAYLOAD, SMALL_COUNT, SMALL_PAYLOAD, _bench, _run
+from anyio import Path
+from conftest import LARGE_COUNT, LARGE_PAYLOAD, SMALL_COUNT, SMALL_PAYLOAD, bench, run_bench
 from grpclib.client import Channel
 from grpclib.server import Server as GrpcServer
 from grpclib_transports.example.server import Greeter
@@ -13,29 +14,33 @@ from grpclib_transports.protocol import make_config
 
 
 @pytest.mark.parametrize("parallelism", [1, 2, 4, 8])
-def test_unix(parallelism):
+def test_unix(parallelism: int) -> None:
     async def run():
-        sock = tempfile.mktemp(suffix=".sock")
+        fd, sock = tempfile.mkstemp(suffix=".sock")
+        os.close(fd)
+        await Path(sock).unlink()
         server = GrpcServer([Greeter()], config=make_config())
         await server.start(path=sock)
         try:
             channel = Channel(path=sock, config=make_config())
-            await _bench(f"unix (small, p={parallelism})", SMALL_PAYLOAD, SMALL_COUNT, channel, parallelism=parallelism)
-            await _bench(f"unix (large, p={parallelism})", LARGE_PAYLOAD, LARGE_COUNT, channel, parallelism=parallelism)
+            await bench(f"unix (small, p={parallelism})", SMALL_PAYLOAD, SMALL_COUNT, channel, parallelism=parallelism)
+            await bench(f"unix (large, p={parallelism})", LARGE_PAYLOAD, LARGE_COUNT, channel, parallelism=parallelism)
             channel.close()
         finally:
             server.close()
             await server.wait_closed()
             with contextlib.suppress(OSError):
-                await anyio.Path(sock).unlink()
+                await Path(sock).unlink()
 
-    _run(f"unix (p={parallelism})", run())
+    run_bench(f"unix (p={parallelism})", run())
 
 
 @pytest.mark.parametrize("parallelism", [1, 2, 4, 8])
-def test_unix_subprocess(parallelism):
+def test_unix_subprocess(parallelism: int) -> None:
     async def run():
-        sock = tempfile.mktemp(suffix=".sock")
+        fd, sock = tempfile.mkstemp(suffix=".sock")
+        os.close(fd)
+        await Path(sock).unlink()
         proc = await asyncio.create_subprocess_exec(
             sys.executable,
             "-m",
@@ -51,14 +56,14 @@ def test_unix_subprocess(parallelism):
         channel = None
         try:
             for _ in range(100):
-                if await anyio.Path(sock).exists():
+                if await Path(sock).exists():
                     break
                 await asyncio.sleep(0.01)
             channel = Channel(path=sock, config=make_config())
-            await _bench(
+            await bench(
                 f"unixproc (small, p={parallelism})", SMALL_PAYLOAD, SMALL_COUNT, channel, parallelism=parallelism
             )
-            await _bench(
+            await bench(
                 f"unixproc (large, p={parallelism})", LARGE_PAYLOAD, LARGE_COUNT, channel, parallelism=parallelism
             )
         finally:
@@ -69,6 +74,6 @@ def test_unix_subprocess(parallelism):
                 await asyncio.wait_for(proc.stderr.read(), timeout=3)
             await proc.wait()
             with contextlib.suppress(OSError):
-                await anyio.Path(sock).unlink()
+                await Path(sock).unlink()
 
-    _run(f"unixproc (p={parallelism})", run())
+    run_bench(f"unixproc (p={parallelism})", run())

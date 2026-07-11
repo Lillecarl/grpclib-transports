@@ -6,7 +6,7 @@ from greeter import greeter_grpc, greeter_pb2
 
 from grpclib_transports.client import connect_unix
 from grpclib_transports.ssh import connect_ssh
-from grpclib_transports.stdio import StdioChannel, _stdio_streams
+from grpclib_transports.stdio import StdioChannel, stdio_streams
 
 
 async def greet(channel: Any, name: str = "World") -> None:
@@ -21,7 +21,7 @@ async def greet_unix(path: str, name: str = "World") -> None:
 
 
 async def greet_stdio(name: str = "World") -> None:
-    reader, writer, transport = await _stdio_streams()
+    reader, writer, transport = await stdio_streams()
     channel = StdioChannel(reader, writer, transport=transport)
     try:
         await greet(channel, name)

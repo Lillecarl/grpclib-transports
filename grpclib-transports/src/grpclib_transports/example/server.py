@@ -12,7 +12,7 @@ from grpclib_transports.server import Server
 
 class Greeter(greeter_grpc.GreeterBase):
     @typing.override
-    async def SayHello(self, stream):
+    async def SayHello(self, stream: typing.Any) -> None:
         request = await stream.recv_message()
         if request is None:
             return
@@ -20,7 +20,7 @@ class Greeter(greeter_grpc.GreeterBase):
         await stream.send_message(reply)
 
     @typing.override
-    async def Upload(self, stream):
+    async def Upload(self, stream: typing.Any) -> None:
         total = 0
         while True:
             request = await stream.recv_message()

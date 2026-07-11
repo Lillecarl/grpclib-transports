@@ -1,4 +1,5 @@
 """Run doc examples as integration tests to prevent staleness."""
+
 from __future__ import annotations
 
 import asyncio

@@ -24,9 +24,10 @@ from grpclib_transports.protocol import (
 )
 
 if TYPE_CHECKING:
-    from collections.abc import AsyncIterator, Mapping, Sequence
+    from collections.abc import AsyncGenerator, Mapping, Sequence
     from pathlib import Path
 
+    from grpclib._typing import IServable
     from grpclib.protocol import H2Protocol
 
 _SUBPROCESS_CLOSE_TIMEOUT = 5.0
@@ -80,7 +81,7 @@ class StdioTransport(BaseCustomTransport):
         pass
 
 
-async def _stdio_streams(
+async def stdio_streams(
     *,
     tuning: TransportTuning = DEFAULT_TUNING,
 ) -> tuple[asyncio.StreamReader, asyncio.StreamWriter, StdioTransport]:
@@ -99,11 +100,11 @@ async def _stdio_streams(
 
         def pause_writing(self) -> None:
             if transport_ref:
-                pause_h2_protocol(transport_ref[0]._protocol)
+                pause_h2_protocol(transport_ref[0].get_protocol())
 
         def resume_writing(self) -> None:
             if transport_ref:
-                resume_h2_protocol(transport_ref[0]._protocol)
+                resume_h2_protocol(transport_ref[0].get_protocol())
 
         def connection_lost(self, exc: Exception | None) -> None:
             if self._closed.done():
@@ -129,7 +130,7 @@ async def _stdio_streams(
 
 
 async def serve_stdio(
-    handlers: list,
+    handlers: list[IServable],
     *,
     tuning: TransportTuning = DEFAULT_TUNING,
 ) -> None:
@@ -138,13 +139,13 @@ async def serve_stdio(
     Redirects stdout to stderr before starting so that only H2 frames go
     over the pipe.
     """
-    reader, _writer, transport = await _stdio_streams(tuning=tuning)
+    reader, _writer, transport = await stdio_streams(tuning=tuning)
 
     with contextlib.redirect_stdout(sys.stderr):
         await serve_h2(handlers, reader, transport, tuning=tuning)
 
 
-def _bump_subprocess_pipe_buffers(
+def bump_subprocess_pipe_buffers(
     proc: asyncio.subprocess.Process,
     *,
     tuning: TransportTuning = DEFAULT_TUNING,
@@ -181,7 +182,7 @@ async def stdio_worker(
     cwd: str | Path | None = None,
     env: Mapping[str, str] | None = None,
     stderr: Any = None,
-) -> AsyncIterator[StdioChannel]:
+) -> AsyncGenerator[StdioChannel]:
     """Spawn a subprocess and yield a :class:`StdioChannel` connected to its stdin/stdout.
 
     Use as an async context manager.  The subprocess is terminated on exit.
@@ -201,7 +202,7 @@ async def stdio_worker(
         await _close_worker_process(proc)
         raise RuntimeError("stdio worker was not started with stdin/stdout pipes")
 
-    _bump_subprocess_pipe_buffers(proc, tuning=tuning)
+    bump_subprocess_pipe_buffers(proc, tuning=tuning)
     channel = StdioChannel(proc.stdout, proc.stdin, tuning=tuning)
     try:
         yield channel
@@ -222,8 +223,8 @@ class StdioChannel(client.Channel):
         tuning: TransportTuning = DEFAULT_TUNING,
         **kwargs: Any,
     ):
-        kwargs.setdefault("config", make_config(tuning))
-        super().__init__(host="stdio", port=0, **kwargs)
+        config = kwargs.pop("config", make_config(tuning))
+        super().__init__(host="stdio", port=0, config=config, **kwargs)  # pyright: ignore[reportUnknownMemberType] -- grpclib Channel ssl param has Unknown in type stubs
         self._stdio_reader = reader
         self._stdio_writer = writer
         self._stdio_transport = transport

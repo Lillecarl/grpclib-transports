@@ -25,8 +25,9 @@ from grpclib_transports.protocol import (
 )
 
 if TYPE_CHECKING:
-    from collections.abc import AsyncIterator
+    from collections.abc import AsyncGenerator
 
+    from grpclib._typing import IServable
     from grpclib.protocol import H2Protocol
 
 _ASYNCSSH_AVAILABLE = importlib.util.find_spec("asyncssh") is not None
@@ -154,7 +155,7 @@ class SshTransport(BaseCustomTransport):
 
 
 async def serve_ssh(
-    handlers: list,
+    handlers: list[IServable],
     host: str = "127.0.0.1",
     port: int = 8022,
     *,
@@ -176,7 +177,7 @@ async def serve_ssh(
         def validate_password(self, username: str, password: str) -> bool:
             return True
 
-    async def session_handler(stdin, stdout, _stderr) -> None:
+    async def session_handler(stdin: Any, stdout: Any, _stderr: Any) -> None:
         transport = SshTransport(stdin, stdout, tuning=tuning)
         await serve_h2(handlers, stdin, transport, tuning=tuning)
 
@@ -212,8 +213,8 @@ class SshChannel(client.Channel):
         tuning: TransportTuning = DEFAULT_TUNING,
         **kwargs: Any,
     ):
-        kwargs.setdefault("config", make_config(tuning))
-        super().__init__(host="ssh", port=0, **kwargs)
+        config = kwargs.pop("config", make_config(tuning))
+        super().__init__(host="ssh", port=0, config=config, **kwargs)  # pyright: ignore[reportUnknownMemberType] -- grpclib Channel ssl param has Unknown in type stubs
         self._ssh_reader = reader
         self._ssh_writer = writer
         self._tuning = tuning
@@ -265,7 +266,7 @@ async def connect_ssh(
     known_hosts: Any = None,
     tuning: TransportTuning = DEFAULT_TUNING,
     **kwargs: Any,
-) -> AsyncIterator[SshChannel]:
+) -> AsyncGenerator[SshChannel]:
     """Connect to an SSH server and yield an :class:`SshChannel`.
 
     Use as an async context manager.  The SSH session and channel are closed

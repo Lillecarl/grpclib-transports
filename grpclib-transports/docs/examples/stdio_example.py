@@ -4,6 +4,7 @@ Run with::
 
     python docs/examples/stdio_example.py
 """
+
 from __future__ import annotations
 
 import asyncio

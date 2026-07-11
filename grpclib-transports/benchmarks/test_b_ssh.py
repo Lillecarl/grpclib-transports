@@ -1,35 +1,39 @@
 import contextlib
+import os
 import socket
 import tempfile
+from typing import Any
 
-import anyio
 import asyncssh
 import pytest
-from conftest import LARGE_COUNT, LARGE_PAYLOAD, SMALL_COUNT, SMALL_PAYLOAD, _bench, _run
+from anyio import Path
+from conftest import LARGE_COUNT, LARGE_PAYLOAD, SMALL_COUNT, SMALL_PAYLOAD, bench, run_bench
 from grpclib_transports.example.server import Greeter
 from grpclib_transports.protocol import DEFAULT_TUNING, serve_h2
 from grpclib_transports.ssh import SshChannel, SshTransport
 
 
 @pytest.mark.parametrize("parallelism", [1, 2, 4, 8])
-def test_ssh(parallelism):
+def test_ssh(parallelism: int) -> None:
     class _Server(asyncssh.SSHServer):
         def password_auth_supported(self):
             return True
 
-        def validate_password(self, username, password):
+        def validate_password(self, username: str, password: str):
             return True
 
     async def run():
-        sock = tempfile.mktemp(suffix=".sock")
-        key = asyncssh.generate_private_key("ssh-ed25519")
+        fd, sock = tempfile.mkstemp(suffix=".sock")
+        os.close(fd)
+        await Path(sock).unlink()
+        key = asyncssh.generate_private_key("ssh-ed25519")  # pyright: ignore[reportUnknownMemberType] -- asyncssh type stubs are incomplete
         ssock = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
         ssock.setsockopt(socket.SOL_SOCKET, socket.SO_SNDBUF, DEFAULT_TUNING.buffer_size)
         ssock.setsockopt(socket.SOL_SOCKET, socket.SO_RCVBUF, DEFAULT_TUNING.buffer_size)
         ssock.bind(sock)
         ssock.listen(100)
 
-        async def session_handler(stdin, stdout, _stderr):
+        async def session_handler(stdin: Any, stdout: Any, _stderr: Any):
             t = SshTransport(stdin, stdout)
             await serve_h2([Greeter()], stdin, t)
 
@@ -67,12 +71,12 @@ def test_ssh(parallelism):
                 ],
             )
             try:
-                stdin, stdout, _ = await conn.open_session(encoding=None)
+                stdin, stdout, _ = await conn.open_session(encoding=None)  # pyright: ignore[reportUnknownVariableType,reportUnknownMemberType] -- asyncssh type stubs are incomplete
                 channel = SshChannel(stdout, stdin)
-                await _bench(
+                await bench(
                     f"ssh (small, p={parallelism})", SMALL_PAYLOAD, SMALL_COUNT, channel, parallelism=parallelism
                 )
-                await _bench(
+                await bench(
                     f"ssh (large, p={parallelism})", LARGE_PAYLOAD, LARGE_COUNT, channel, parallelism=parallelism
                 )
                 await channel.aclose()
@@ -82,6 +86,6 @@ def test_ssh(parallelism):
             acceptor.close()
             await acceptor.wait_closed()
             with contextlib.suppress(OSError):
-                await anyio.Path(sock).unlink()
+                await Path(sock).unlink()
 
-    _run(f"ssh (p={parallelism})", run())
+    run_bench(f"ssh (p={parallelism})", run())

@@ -1,5 +1,6 @@
 import asyncio
 import contextlib
+import os
 import tempfile
 from pathlib import Path
 
@@ -10,7 +11,9 @@ from grpclib_transports.server import Server
 
 
 def test_unix_socket():
-    sock_path = tempfile.mktemp(suffix=".sock")
+    fd, sock_path = tempfile.mkstemp(suffix=".sock")
+    os.close(fd)
+    Path(sock_path).unlink()
 
     async def run():
         server = Server([Greeter()])

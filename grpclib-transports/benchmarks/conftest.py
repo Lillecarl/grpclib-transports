@@ -9,10 +9,11 @@ import statistics
 import time
 import traceback
 from pathlib import Path
+from typing import Any
 
 from greeter import greeter_grpc, greeter_pb2
 from grpclib_transports.protocol import DEFAULT_TUNING
-from grpclib_transports.stdio import _bump_subprocess_pipe_buffers
+from grpclib_transports.stdio import bump_subprocess_pipe_buffers
 from rich.console import Console
 from rich.table import Table
 
@@ -20,9 +21,9 @@ logging.getLogger("h2").setLevel(logging.WARNING)
 logging.getLogger("asyncssh").setLevel(logging.WARNING)
 
 
-def _bump_pipe_buf(proc: asyncio.subprocess.Process) -> None:
+def bump_pipe_buf(proc: asyncio.subprocess.Process) -> None:
     """Increase kernel pipe buffer size on subprocess pipes."""
-    _bump_subprocess_pipe_buffers(proc, tuning=DEFAULT_TUNING)
+    bump_subprocess_pipe_buffers(proc, tuning=DEFAULT_TUNING)
 
 
 SMALL_COUNT = 200
@@ -53,8 +54,8 @@ BENCH_SAMPLES = _env_int("GRPCLAB_BENCH_SAMPLES", 3)
 STARTUP_COUNT = _env_int("GRPCLAB_BENCH_STARTUP_COUNT", 3)
 PROFILE_BENCHMARKS = os.environ.get("GRPCLAB_BENCH_PROFILE") == "1"
 
-_bench_results: list[dict] = []
-_latency_results: list[dict] = []
+_bench_results: list[dict[str, Any]] = []
+_latency_results: list[dict[str, Any]] = []
 _dump_paths: list[Path] = []
 
 
@@ -64,13 +65,13 @@ def _bench_types() -> list[str]:
     return [t for t in preferred if t in seen] + sorted(seen - set(preferred))
 
 
-def _sample_rate(count, elapsed, payload_size):
+def _sample_rate(count: float, elapsed: float, payload_size: float) -> float:
     if payload_size:
         return count * payload_size / elapsed / (1024 * 1024)
     return count / elapsed
 
 
-def _report(label, count, elapsed, payload_size, samples):
+def report_bench(label: str, count: int, elapsed: float, payload_size: int, samples: list[float]) -> None:
     msgs_per_sec = count / elapsed
     total_bytes = count * payload_size
     mb_per_sec = total_bytes / elapsed / (1024 * 1024)
@@ -94,7 +95,7 @@ def _report(label, count, elapsed, payload_size, samples):
         )
 
 
-def _report_latency(label, count, elapsed, samples):
+def _report_latency(label: str, count: int, elapsed: float, samples: list[float]) -> None:
     m = re.match(r"(\w+) \((\w+)\)", label)
     if m:
         _latency_results.append(
@@ -142,7 +143,7 @@ def _dump_profile(label: str, path_to_timeline: str) -> Path:
     return path
 
 
-async def _bench_warmup(stub, req, parallelism=1):
+async def _bench_warmup(stub: Any, req: Any, parallelism: int = 1) -> None:
     if parallelism == 1:
         await stub.SayHello(req)
     else:
@@ -150,7 +151,7 @@ async def _bench_warmup(stub, req, parallelism=1):
         await asyncio.gather(*warmup)
 
 
-async def _bench_once(stub, req, count, parallelism=1):
+async def _bench_once(stub: Any, req: Any, count: int, parallelism: int = 1) -> float:
     if parallelism == 1:
         start = time.perf_counter()
         for _ in range(count):
@@ -175,17 +176,17 @@ async def _bench_once(stub, req, count, parallelism=1):
     return time.perf_counter() - start
 
 
-async def _bench(label, payload, count, channel, parallelism=1):
+async def bench(label: str, payload: bytes, count: int, channel: Any, parallelism: int = 1) -> None:
     stub = greeter_grpc.GreeterStub(channel)
     req = greeter_pb2.HelloRequest(name="bench", payload=payload)
     await _bench_warmup(stub, req, parallelism=parallelism)
     samples = [await _bench_once(stub, req, count, parallelism=parallelism) for _ in range(BENCH_SAMPLES)]
     elapsed = statistics.median(samples)
-    _report(label, count, elapsed, len(payload), samples)
+    report_bench(label, count, elapsed, len(payload), samples)
 
 
-async def _bench_lifecycle(label, count, operation):
-    samples = []
+async def bench_lifecycle(label: str, count: int, operation: Any) -> None:
+    samples: list[float] = []
     for _ in range(BENCH_SAMPLES):
         start = time.perf_counter()
         for _ in range(count):
@@ -195,7 +196,7 @@ async def _bench_lifecycle(label, count, operation):
     _report_latency(label, count, elapsed, samples)
 
 
-async def _runner_with_timeout(coro, label, loop):
+async def _runner_with_timeout(coro: Any, label: str, loop: asyncio.AbstractEventLoop) -> None:
     """
     Run coro with a manual timeout. On timeout, dump task stacks *before*
     cancelling anything, so we capture the true deadlock state.
@@ -220,7 +221,7 @@ async def _runner_with_timeout(coro, label, loop):
         timer.cancel()
 
 
-def _run_with_dump(label, coro_factory):
+def _run_with_dump(label: str, coro_factory: Any) -> None:
     """
     Run a benchmark with full profiling support.
 
@@ -270,7 +271,7 @@ def _run_with_dump(label, coro_factory):
         loop.close()
 
 
-def _run(label, coro):
+def run_bench(label: str, coro: Any) -> None:
     """
     Run a benchmark with profiling and task-stack dump on timeout.
     Accepts a coroutine (not a factory) — wraps it for _run_with_dump.
@@ -302,7 +303,7 @@ def _fmt_ms(v: float) -> str:
 _console = Console(highlight=False)
 
 
-def _build_throughput_table(test_type: str, rows: list[dict]) -> Table:
+def _build_throughput_table(test_type: str, rows: list[dict[str, Any]]) -> Table:
     transports = sorted({r["transport"] for r in rows})
     parallelisms = sorted({r["parallelism"] for r in rows})
     cols = ["Transport"] + [f"p={p}" for p in parallelisms]
@@ -326,7 +327,7 @@ def _build_throughput_table(test_type: str, rows: list[dict]) -> Table:
     return table
 
 
-def pytest_terminal_summary(terminalreporter, exitstatus, config):  # noqa: ARG001
+def pytest_terminal_summary(terminalreporter: Any, exitstatus: Any, config: Any) -> None:  # noqa: ARG001
     if not _bench_results and not _latency_results:
         if _dump_paths:
             terminalreporter.section("Diagnostic Dumps", bold=True, yellow=True)

@@ -28,7 +28,7 @@ class RegisteredPeer[PeerT: LogicalRpcPeer]:
 
     id: str
     peer: PeerT
-    metadata: Mapping[str, Any] = field(default_factory=dict)
+    metadata: Mapping[str, Any] = field(default_factory=dict)  # pyright: ignore[reportUnknownVariableType] -- dict() satisfies Mapping[str, Any] at runtime
 
     async def call(
         self,
