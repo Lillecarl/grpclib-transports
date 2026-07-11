@@ -5,7 +5,7 @@ import tempfile
 from pathlib import Path
 
 import asyncssh
-from demo import demo_grpc, demo_pb2
+from greeter import greeter_grpc, greeter_pb2
 from grpclib_transports.example.server import Greeter
 from grpclib_transports.protocol import DEFAULT_TUNING, serve_h2
 from grpclib_transports.ssh import SshTransport, connect_ssh
@@ -69,8 +69,8 @@ def test_ssh_transport():
                     "chacha20-poly1305@openssh.com",
                 ],
             ) as channel:
-                stub = demo_grpc.GreeterStub(channel)
-                response = await stub.SayHello(demo_pb2.HelloRequest(name="SSH"))
+                stub = greeter_grpc.GreeterStub(channel)
+                response = await stub.SayHello(greeter_pb2.HelloRequest(name="SSH"))
                 assert response.message == "Hello, SSH!"
         finally:
             acceptor.close()

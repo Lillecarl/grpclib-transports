@@ -5,7 +5,7 @@ import os
 import sys
 
 from conftest import STARTUP_COUNT, _bench_lifecycle, _run
-from demo import demo_grpc, demo_pb2
+from greeter import greeter_grpc, greeter_pb2
 from grpclib_transports.example.server import Greeter
 from grpclib_transports.multiprocessing import (
     MultiprocessingPipeEndpoint,
@@ -43,8 +43,8 @@ async def _stdio_lifecycle() -> None:
         [sys.executable, "-m", "grpclib_transports", "server", "--stdio"],
         stderr=asyncio.subprocess.DEVNULL,
     ) as channel:
-        stub = demo_grpc.GreeterStub(channel)
-        response = await stub.SayHello(demo_pb2.HelloRequest(name="Lifecycle"))
+        stub = greeter_grpc.GreeterStub(channel)
+        response = await stub.SayHello(greeter_pb2.HelloRequest(name="Lifecycle"))
         if response.message != "Hello, Lifecycle!":
             raise RuntimeError(response.message)
 
@@ -61,8 +61,8 @@ async def _multiprocessing_lifecycle() -> None:
     channel = await pair.parent.open_channel()
     pair.close_parent_connections()
     try:
-        stub = demo_grpc.GreeterStub(channel)
-        response = await stub.SayHello(demo_pb2.HelloRequest(name="Lifecycle"))
+        stub = greeter_grpc.GreeterStub(channel)
+        response = await stub.SayHello(greeter_pb2.HelloRequest(name="Lifecycle"))
         if response.message != "Hello, Lifecycle!":
             raise RuntimeError(response.message)
     finally:

@@ -7,8 +7,8 @@
   mypy-protobuf,
 }:
 buildPythonPackage {
-  pname = "demo-proto";
-  version = "0.1.0";
+  pname = "greeter-proto";
+  version = (builtins.fromTOML (builtins.readFile ./pyproject.toml)).project.version;
 
   src = lib.cleanSource ./.;
 
@@ -26,18 +26,18 @@ buildPythonPackage {
 
   format = "pyproject";
   preBuild = ''
-    mkdir -p src/demo
-    touch src/demo/py.typed
-    touch src/demo/__init__.py
+    mkdir -p src/greeter
+    touch src/greeter/py.typed
+    touch src/greeter/__init__.py
     protoc \
       --proto_path=. \
-      --python_out="src/demo" \
-      --grpclib_python_out="src/demo" \
-      --mypy_out="src/demo" \
-      demo.proto
+      --python_out="src/greeter" \
+      --grpclib_python_out="src/greeter" \
+      --mypy_out="src/greeter" \
+      greeter.proto
 
-    substituteInPlace src/demo/demo_grpc.py \
-      --replace-fail "import demo_pb2" "from . import demo_pb2"
+    substituteInPlace src/greeter/greeter_grpc.py \
+      --replace-fail "import greeter_pb2" "from . import greeter_pb2"
   '';
 
   meta = with lib; {

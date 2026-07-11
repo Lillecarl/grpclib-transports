@@ -11,7 +11,7 @@ import time
 import anyio
 import pytest
 from conftest import BENCH_SAMPLES, _bump_pipe_buf, _report, _run
-from demo import demo_grpc, demo_pb2
+from greeter import greeter_grpc, greeter_pb2
 from grpclib.client import Channel
 from grpclib_transports.protocol import DEFAULT_TUNING, make_config
 from grpclib_transports.stdio import StdioChannel
@@ -21,7 +21,7 @@ TOTAL_SIZE = 8 * 1024 * 1024
 UPLOAD_COUNT = 2
 UPLOAD_DATA = os.urandom(TOTAL_SIZE)
 UPLOAD_MESSAGES = [
-    demo_pb2.HelloRequest(name="chunk", payload=chunk)
+    greeter_pb2.HelloRequest(name="chunk", payload=chunk)
     for chunk in iter_chunks(UPLOAD_DATA, DEFAULT_TUNING.transfer_chunk_size)
 ]
 
@@ -32,7 +32,7 @@ async def _upload_once(stub) -> None:
 
 
 async def _bench_upload(label, channel) -> None:
-    stub = demo_grpc.GreeterStub(channel)
+    stub = greeter_grpc.GreeterStub(channel)
     await _upload_once(stub)
 
     samples = []

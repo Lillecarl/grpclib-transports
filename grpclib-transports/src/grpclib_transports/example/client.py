@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from typing import Any
 
-from demo import demo_grpc, demo_pb2
+from greeter import greeter_grpc, greeter_pb2
 
 from grpclib_transports.client import connect_unix
 from grpclib_transports.ssh import connect_ssh
@@ -10,8 +10,8 @@ from grpclib_transports.stdio import StdioChannel, _stdio_streams
 
 
 async def greet(channel: Any, name: str = "World") -> None:
-    stub = demo_grpc.GreeterStub(channel)
-    request = demo_pb2.HelloRequest(name=name)
+    stub = greeter_grpc.GreeterStub(channel)
+    request = greeter_pb2.HelloRequest(name=name)
     await stub.SayHello(request)
 
 

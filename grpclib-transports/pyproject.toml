@@ -13,6 +13,7 @@ dependencies = ["grpclib", "h2"]
 [project.optional-dependencies]
 docs = ["furo", "myst-parser", "sphinx"]
 ssh = ["asyncssh"]
+test = ["anyio", "pytest", "rich"]
 
 [project.scripts]
 grpclib-transports = "grpclib_transports.__main__:main"

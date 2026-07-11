@@ -4,19 +4,19 @@ import asyncio
 import signal
 import typing
 
-from demo import demo_grpc, demo_pb2
+from greeter import greeter_grpc, greeter_pb2
 
 from grpclib_transports.protocol import signal_stop
 from grpclib_transports.server import Server
 
 
-class Greeter(demo_grpc.GreeterBase):
+class Greeter(greeter_grpc.GreeterBase):
     @typing.override
     async def SayHello(self, stream):
         request = await stream.recv_message()
         if request is None:
             return
-        reply = demo_pb2.HelloReply(message=f"Hello, {request.name}!")
+        reply = greeter_pb2.HelloReply(message=f"Hello, {request.name}!")
         await stream.send_message(reply)
 
     @typing.override
@@ -27,7 +27,7 @@ class Greeter(demo_grpc.GreeterBase):
             if request is None:
                 break
             total += len(request.payload)
-        reply = demo_pb2.HelloReply(message=f"Uploaded {total} bytes")
+        reply = greeter_pb2.HelloReply(message=f"Uploaded {total} bytes")
         await stream.send_message(reply)
 
 

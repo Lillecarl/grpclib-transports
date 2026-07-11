@@ -5,7 +5,7 @@ import contextlib
 import multiprocessing as mp
 import os
 
-from demo import demo_grpc, demo_pb2
+from greeter import greeter_grpc, greeter_pb2
 from grpclib_transports.example.server import Greeter
 from grpclib_transports.multiprocessing import multiprocessing_pipe_pair
 from grpclib_transports.pipes import (
@@ -41,8 +41,8 @@ async def _assert_pipe_round_trip(
         transport=client_transport,
     )
     try:
-        stub = demo_grpc.GreeterStub(channel)
-        response = await stub.SayHello(demo_pb2.HelloRequest(name="Pipe"))
+        stub = greeter_grpc.GreeterStub(channel)
+        response = await stub.SayHello(greeter_pb2.HelloRequest(name="Pipe"))
         assert response.message == "Hello, Pipe!"
     finally:
         await channel.aclose()
@@ -68,7 +68,7 @@ def test_raw_pipe_transport():
 
 def test_multiprocessing_pipe_pair_uses_forkserver_context():
     assert mp.get_start_method(allow_none=True) is None
-    pair = multiprocessing_pipe_pair(preload=["demo"])
+    pair = multiprocessing_pipe_pair(preload=["greeter"])
     assert pair.context.get_start_method() == "forkserver"
     assert mp.get_start_method(allow_none=True) is None
     try:

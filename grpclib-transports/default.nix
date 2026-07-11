@@ -4,14 +4,14 @@
   buildPythonPackage,
   hatchling,
   # deps
-  proto,
   grpclib,
   h2,
   asyncssh ? null,
   # test inputs
-  rich,
-  anyio,
   pytestCheckHook,
+  greeter-proto,
+  anyio,
+  rich,
 }:
 buildPythonPackage {
   pname = "grpclib-transports";
@@ -23,7 +23,6 @@ buildPythonPackage {
   build-system = [ hatchling ];
 
   dependencies = [
-    proto
     grpclib
     h2
   ]
@@ -31,6 +30,7 @@ buildPythonPackage {
 
   nativeCheckInputs = [
     pytestCheckHook
+    greeter-proto
     anyio
     rich
   ];

@@ -4,9 +4,9 @@
 let
   self = rec {
     inherit pkgs;
-    proto = pkgs.python3Packages.callPackage ./proto { };
+    greeter-proto = pkgs.python3Packages.callPackage ./greeter-proto { };
     grpclib-transports = pkgs.python3Packages.callPackage ./grpclib-transports {
-      inherit proto;
+      inherit greeter-proto;
     };
     shell = pkgs.python3Packages.callPackage ./nix/shell.nix {
       inherit grpclib-transports;

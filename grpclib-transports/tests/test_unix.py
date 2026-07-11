@@ -3,7 +3,7 @@ import contextlib
 import tempfile
 from pathlib import Path
 
-from demo import demo_grpc, demo_pb2
+from greeter import greeter_grpc, greeter_pb2
 from grpclib_transports.client import connect_unix
 from grpclib_transports.example.server import Greeter
 from grpclib_transports.server import Server
@@ -17,8 +17,8 @@ def test_unix_socket():
         await server.start_unix(sock_path)
         try:
             channel = connect_unix(sock_path)
-            stub = demo_grpc.GreeterStub(channel)
-            response = await stub.SayHello(demo_pb2.HelloRequest(name="Test"))
+            stub = greeter_grpc.GreeterStub(channel)
+            response = await stub.SayHello(greeter_pb2.HelloRequest(name="Test"))
             assert response.message == "Hello, Test!"
             channel.close()
         finally:
