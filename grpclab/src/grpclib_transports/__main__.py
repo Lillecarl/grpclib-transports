@@ -5,11 +5,11 @@ import asyncio
 
 from grpclib.server import Server
 
-from grpclab.example.client import greet_ssh, greet_stdio, greet_unix
-from grpclab.example.server import Greeter, serve
-from grpclab.protocol import make_config
-from grpclab.ssh import serve_ssh
-from grpclab.stdio import serve_stdio
+from grpclib_transports.example.client import greet_ssh, greet_stdio, greet_unix
+from grpclib_transports.example.server import Greeter, serve
+from grpclib_transports.protocol import make_config
+from grpclib_transports.ssh import serve_ssh
+from grpclib_transports.stdio import serve_stdio
 
 
 async def run_internal(path: str) -> None:
@@ -23,7 +23,7 @@ async def run_internal(path: str) -> None:
 
 
 def main() -> None:
-    parser = argparse.ArgumentParser(prog="grpclab")
+    parser = argparse.ArgumentParser(prog="grpclib-transports")
     sub = parser.add_subparsers(dest="command", required=True)
 
     p_server = sub.add_parser("server")
@@ -43,7 +43,7 @@ def main() -> None:
     p_client.add_argument("--password", default="demo")
 
     p_internal = sub.add_parser("internal")
-    p_internal.add_argument("--unix-path", default="/tmp/grpclab.sock")
+    p_internal.add_argument("--unix-path", default="/tmp/grpclib_transports.sock")
 
     args = parser.parse_args()
 
@@ -53,14 +53,14 @@ def main() -> None:
         elif args.stdio:
             asyncio.run(serve_stdio([Greeter()]))
         else:
-            asyncio.run(serve(args.unix_path or "/tmp/grpclab.sock"))
+            asyncio.run(serve(args.unix_path or "/tmp/grpclib_transports.sock"))
     elif args.command == "client":
         if args.ssh:
             asyncio.run(greet_ssh(args.host, args.port, args.username, args.password))
         elif args.stdio:
             asyncio.run(greet_stdio())
         else:
-            asyncio.run(greet_unix(args.unix_path or "/tmp/grpclab.sock"))
+            asyncio.run(greet_unix(args.unix_path or "/tmp/grpclib_transports.sock"))
     elif args.command == "internal":
         asyncio.run(run_internal(args.unix_path))
 

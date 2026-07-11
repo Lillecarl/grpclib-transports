@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import asyncio
 import contextlib
+import importlib.util
 import signal
 from dataclasses import dataclass
 from typing import Any
@@ -9,7 +10,7 @@ from typing import Any
 from grpclib import client
 from grpclib.protocol import H2Protocol
 
-from grpclab.protocol import (
+from grpclib_transports.protocol import (
     DEFAULT_TUNING,
     BaseCustomTransport,
     TransportTuning,
@@ -21,6 +22,23 @@ from grpclab.protocol import (
     serve_h2,
     signal_stop,
 )
+
+_ASYNCSSH_AVAILABLE = importlib.util.find_spec("asyncssh") is not None
+
+
+def is_ssh_available() -> bool:
+    return _ASYNCSSH_AVAILABLE
+
+
+def _load_asyncssh() -> Any:
+    if not _ASYNCSSH_AVAILABLE:
+        raise ImportError(
+            "grpclib_transports.ssh requires asyncssh. "
+            "Install the Nix package with asyncssh enabled to use SSH transports."
+        )
+    import asyncssh
+
+    return asyncssh
 
 
 def _required_asyncssh_attr(obj: Any, name: str) -> Any:
@@ -131,7 +149,7 @@ async def serve_ssh(
     *,
     tuning: TransportTuning = DEFAULT_TUNING,
 ) -> None:
-    import asyncssh
+    asyncssh = _load_asyncssh()
 
     key = asyncssh.generate_private_key("ssh-ed25519")
 

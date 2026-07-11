@@ -6,9 +6,9 @@ from pathlib import Path
 
 import asyncssh
 from demo import demo_grpc, demo_pb2
-from grpclab.example.server import Greeter
-from grpclab.protocol import DEFAULT_TUNING, serve_h2
-from grpclab.ssh import SshChannel, SshTransport
+from grpclib_transports.example.server import Greeter
+from grpclib_transports.protocol import DEFAULT_TUNING, serve_h2
+from grpclib_transports.ssh import SshChannel, SshTransport
 
 
 class _TestSSHServer(asyncssh.SSHServer):

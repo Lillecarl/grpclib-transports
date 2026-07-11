@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from grpclab.protocol import (
+from grpclib_transports.protocol import (
     DEFAULT_TUNING as DEFAULT_TUNING,
     BaseCustomTransport as BaseCustomTransport,
     PeerIdentity as PeerIdentity,
@@ -21,12 +21,13 @@ from grpclab.protocol import (
     serve_h2 as serve_h2,
     signal_stop as signal_stop,
 )
-from grpclab.ssh import (
+from grpclib_transports.ssh import (
     SshChannel as SshChannel,
     SshTransport as SshTransport,
+    is_ssh_available as is_ssh_available,
     serve_ssh as serve_ssh,
 )
-from grpclab.stdio import (
+from grpclib_transports.stdio import (
     StdioChannel as StdioChannel,
     StdioTransport as StdioTransport,
     serve_stdio as serve_stdio,
@@ -44,6 +45,7 @@ __all__ = [
     "build_mapping",
     "init_h2_transport",
     "install_h2_fast_receive_patch",
+    "is_ssh_available",
     "iter_chunks",
     "local_process_identity",
     "make_config",

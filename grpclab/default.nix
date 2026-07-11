@@ -3,12 +3,13 @@
   buildPythonApplication,
   hatchling,
   proto,
-  asyncssh,
-  anyio,
+  grpclib,
+  h2,
+  asyncssh ? null,
   pytestCheckHook,
 }:
 buildPythonApplication {
-  pname = "grpclab";
+  pname = "grpclib-transports";
   version = "0.1.0";
   pyproject = true;
 
@@ -18,15 +19,15 @@ buildPythonApplication {
 
   dependencies = [
     proto
-    asyncssh
-    anyio
-  ];
+    grpclib
+    h2
+  ] ++ lib.optional (asyncssh != null) asyncssh;
 
   nativeCheckInputs = [
     pytestCheckHook
   ];
 
   meta = {
-    mainProgram = "grpclab";
+    mainProgram = "grpclib-transports";
   };
 }

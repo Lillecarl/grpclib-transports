@@ -5,9 +5,9 @@ from typing import Any
 from demo import demo_grpc, demo_pb2
 from grpclib.client import Channel
 
-from grpclab.protocol import make_config
-from grpclab.ssh import SshChannel
-from grpclab.stdio import StdioChannel, _stdio_streams
+from grpclib_transports.protocol import make_config
+from grpclib_transports.ssh import SshChannel, _load_asyncssh
+from grpclib_transports.stdio import StdioChannel, _stdio_streams
 
 
 async def greet(channel: Any, name: str = "World") -> None:
@@ -37,7 +37,7 @@ async def greet_ssh(
     password: str = "demo",
     name: str = "World",
 ) -> None:
-    import asyncssh
+    asyncssh = _load_asyncssh()
 
     async with asyncssh.connect(
         host,

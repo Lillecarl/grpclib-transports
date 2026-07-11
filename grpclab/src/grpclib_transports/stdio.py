@@ -8,7 +8,7 @@ from typing import Any
 from grpclib import client
 from grpclib.protocol import H2Protocol
 
-from grpclab.protocol import (
+from grpclib_transports.protocol import (
     DEFAULT_TUNING,
     BaseCustomTransport,
     TransportTuning,

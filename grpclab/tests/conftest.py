@@ -1,1 +1,1 @@
-import grpclab._logging  # noqa: F401
+import grpclib_transports._logging  # noqa: F401

@@ -7,7 +7,7 @@ import typing
 from demo import demo_grpc, demo_pb2
 from grpclib.server import Server
 
-from grpclab.protocol import make_config, signal_stop
+from grpclib_transports.protocol import make_config, signal_stop
 
 
 class Greeter(demo_grpc.GreeterBase):

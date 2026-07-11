@@ -6,9 +6,9 @@ import anyio
 import asyncssh
 import pytest
 from conftest import LARGE_COUNT, LARGE_PAYLOAD, SMALL_COUNT, SMALL_PAYLOAD, _bench, _run
-from grpclab.example.server import Greeter
-from grpclab.protocol import DEFAULT_TUNING, serve_h2
-from grpclab.ssh import SshChannel, SshTransport
+from grpclib_transports.example.server import Greeter
+from grpclib_transports.protocol import DEFAULT_TUNING, serve_h2
+from grpclib_transports.ssh import SshChannel, SshTransport
 
 
 @pytest.mark.parametrize("parallelism", [1, 2, 4, 8])

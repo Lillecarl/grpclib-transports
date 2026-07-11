@@ -2,7 +2,7 @@ import asyncio
 import sys
 
 from demo import demo_grpc, demo_pb2
-from grpclab.stdio import StdioChannel
+from grpclib_transports.stdio import StdioChannel
 
 
 def test_stdio_transport():
@@ -10,7 +10,7 @@ def test_stdio_transport():
         proc = await asyncio.create_subprocess_exec(
             sys.executable,
             "-m",
-            "grpclab",
+            "grpclib_transports",
             "server",
             "--stdio",
             stdin=asyncio.subprocess.PIPE,

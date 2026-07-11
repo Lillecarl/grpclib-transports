@@ -3,7 +3,7 @@ requires = ["hatchling"]
 build-backend = "hatchling.build"
 
 [project]
-name = "grpclab"
+name = "grpclib-transports"
 version = "0.1.0"
 description = "gRPC over custom transports (stdio, SSH)"
 authors = [
@@ -13,14 +13,18 @@ requires-python = ">=3.12"
 dependencies = [
     "grpclib",
     "h2",
+]
+
+[project.optional-dependencies]
+ssh = [
     "asyncssh",
 ]
 
 [project.scripts]
-grpclab = "grpclab.__main__:main"
+grpclib-transports = "grpclib_transports.__main__:main"
 
 [tool.hatch.build.targets.wheel]
-packages = ["src/grpclab"]
+packages = ["src/grpclib_transports"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]

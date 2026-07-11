@@ -12,8 +12,8 @@ import anyio
 import pytest
 from conftest import BENCH_SAMPLES, _bump_pipe_buf, _report, _run
 from demo import demo_grpc, demo_pb2
-from grpclab.protocol import DEFAULT_TUNING, iter_chunks, make_config
-from grpclab.stdio import StdioChannel
+from grpclib_transports.protocol import DEFAULT_TUNING, iter_chunks, make_config
+from grpclib_transports.stdio import StdioChannel
 from grpclib.client import Channel
 
 TOTAL_SIZE = 8 * 1024 * 1024
@@ -54,7 +54,7 @@ async def _bench_upload(label, channel) -> None:
 def test_streaming_upload_8mib(transport):
     async def run_stdio():
         proc = await asyncio.create_subprocess_exec(
-            sys.executable, "-m", "grpclab", "server", "--stdio",
+            sys.executable, "-m", "grpclib_transports", "server", "--stdio",
             stdin=asyncio.subprocess.PIPE,
             stdout=asyncio.subprocess.PIPE,
             stderr=asyncio.subprocess.PIPE,
@@ -75,7 +75,7 @@ def test_streaming_upload_8mib(transport):
         proc = await asyncio.create_subprocess_exec(
             sys.executable,
             "-m",
-            "grpclab",
+            "grpclib_transports",
             "server",
             "--unix-path",
             sock,

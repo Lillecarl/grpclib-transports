@@ -11,9 +11,9 @@ import time
 import traceback
 from pathlib import Path
 
-import grpclab._logging  # noqa: F401
+import grpclib_transports._logging  # noqa: F401
 from demo import demo_grpc, demo_pb2
-from grpclab.protocol import DEFAULT_TUNING
+from grpclib_transports.protocol import DEFAULT_TUNING
 
 
 def _bump_pipe_buf(proc: asyncio.subprocess.Process) -> None:

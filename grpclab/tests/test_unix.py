@@ -4,7 +4,7 @@ import tempfile
 from pathlib import Path
 
 from demo import demo_grpc, demo_pb2
-from grpclab.example.server import Greeter
+from grpclib_transports.example.server import Greeter
 from grpclib.client import Channel
 from grpclib.server import Server
 

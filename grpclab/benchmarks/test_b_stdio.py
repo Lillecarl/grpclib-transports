@@ -3,14 +3,14 @@ import sys
 
 import pytest
 from conftest import LARGE_COUNT, LARGE_PAYLOAD, SMALL_COUNT, SMALL_PAYLOAD, _bench, _bump_pipe_buf, _run
-from grpclab.stdio import StdioChannel
+from grpclib_transports.stdio import StdioChannel
 
 
 @pytest.mark.parametrize("parallelism", [1, 2, 4, 8])
 def test_stdio(parallelism):
     async def run():
         proc = await asyncio.create_subprocess_exec(
-            sys.executable, "-m", "grpclab", "server", "--stdio",
+            sys.executable, "-m", "grpclib_transports", "server", "--stdio",
             stdin=asyncio.subprocess.PIPE,
             stdout=asyncio.subprocess.PIPE,
             stderr=asyncio.subprocess.PIPE,

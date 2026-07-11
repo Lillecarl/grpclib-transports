@@ -5,17 +5,19 @@
   asyncssh,
   pytest,
   pyinstrument,
-  grpclab,
+  anyio,
+  grpclib-transports,
   pyright,
   ruff,
 }:
 let
   python = python3.withPackages (
     pp:
-    grpclab.dependencies
+    grpclib-transports.dependencies
     ++ [
       proto
       asyncssh
+      anyio
       pytest
       pyinstrument
     ]

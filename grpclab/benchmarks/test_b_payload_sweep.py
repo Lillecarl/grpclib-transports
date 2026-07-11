@@ -9,8 +9,8 @@ import tempfile
 import anyio
 import pytest
 from conftest import _bench, _bump_pipe_buf, _run
-from grpclab.protocol import make_config
-from grpclab.stdio import StdioChannel
+from grpclib_transports.protocol import make_config
+from grpclib_transports.stdio import StdioChannel
 from grpclib.client import Channel
 
 PAYLOAD_CASES = {
@@ -25,7 +25,7 @@ def test_stdio_payload_sweep(payload_label):
     async def run():
         payload, count = PAYLOAD_CASES[payload_label]
         proc = await asyncio.create_subprocess_exec(
-            sys.executable, "-m", "grpclab", "server", "--stdio",
+            sys.executable, "-m", "grpclib_transports", "server", "--stdio",
             stdin=asyncio.subprocess.PIPE,
             stdout=asyncio.subprocess.PIPE,
             stderr=asyncio.subprocess.PIPE,
@@ -51,7 +51,7 @@ def test_unixproc_payload_sweep(payload_label):
         proc = await asyncio.create_subprocess_exec(
             sys.executable,
             "-m",
-            "grpclab",
+            "grpclib_transports",
             "server",
             "--unix-path",
             sock,

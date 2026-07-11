@@ -6,8 +6,8 @@ import tempfile
 import anyio
 import pytest
 from conftest import LARGE_COUNT, LARGE_PAYLOAD, SMALL_COUNT, SMALL_PAYLOAD, _bench, _run
-from grpclab.example.server import Greeter
-from grpclab.protocol import make_config
+from grpclib_transports.example.server import Greeter
+from grpclib_transports.protocol import make_config
 from grpclib.client import Channel
 from grpclib.server import Server as GrpcServer
 
@@ -38,7 +38,7 @@ def test_unix_subprocess(parallelism):
         proc = await asyncio.create_subprocess_exec(
             sys.executable,
             "-m",
-            "grpclab",
+            "grpclib_transports",
             "server",
             "--unix-path",
             sock,
