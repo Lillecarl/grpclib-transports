@@ -6,6 +6,7 @@ from typing import Any
 
 import pytest
 from conftest import LARGE_COUNT, LARGE_PAYLOAD, SMALL_COUNT, SMALL_PAYLOAD, bench_worker, run_bench
+
 from grpclib_transports.example.server import WorkerGreeter
 from grpclib_transports.multiprocessing import (
     MultiprocessingPipeEndpoint,

@@ -4,52 +4,40 @@ import asyncio
 import signal
 import typing
 
-from greeter import common_pb2, server_grpc, worker_grpc
-
+import greeter2.greeter.server as server_grpc
+import greeter2.greeter.worker as worker_grpc
+from greeter2.greeter.common import HelloReply, HelloRequest
 from grpclib_transports.protocol import signal_stop
 from grpclib_transports.server import Server
+
+if typing.TYPE_CHECKING:
+    from collections.abc import AsyncIterator
 
 
 class Greeter(server_grpc.GreeterBase):
     @typing.override
-    async def SayHello(self, stream: typing.Any) -> None:
-        request = await stream.recv_message()
-        if request is None:
-            return
-        reply = common_pb2.HelloReply(message=f"Hello, {request.name}!")
-        await stream.send_message(reply)
+    async def say_hello(self, message: HelloRequest) -> HelloReply:
+        return HelloReply(message=f"Hello, {message.name}!")
 
     @typing.override
-    async def Upload(self, stream: typing.Any) -> None:
+    async def upload(self, messages: AsyncIterator[HelloRequest]) -> HelloReply:
         total = 0
-        while True:
-            request = await stream.recv_message()
-            if request is None:
-                break
+        async for request in messages:
             total += len(request.payload)
-        reply = common_pb2.HelloReply(message=f"Uploaded {total} bytes")
-        await stream.send_message(reply)
+        return HelloReply(message=f"Uploaded {total} bytes")
 
 
 class WorkerGreeter(worker_grpc.GreeterWorkerBase):
     @typing.override
-    async def SayHello(self, stream: typing.Any) -> None:
-        request = await stream.recv_message()
-        if request is None:
-            return
-        reply = common_pb2.HelloReply(message=f"Hello, {request.name}!")
-        await stream.send_message(reply)
+    async def say_hello(self, message: HelloRequest) -> HelloReply:
+        return HelloReply(message=f"Hello, {message.name}!")
 
     @typing.override
-    async def Upload(self, stream: typing.Any) -> None:
+    async def upload(self, messages: AsyncIterator[HelloRequest]) -> HelloReply:
         total = 0
-        while True:
-            request = await stream.recv_message()
-            if request is None:
-                break
+        async for request in messages:
             total += len(request.payload)
-        reply = common_pb2.HelloReply(message=f"Uploaded {total} bytes")
-        await stream.send_message(reply)
+        return HelloReply(message=f"Uploaded {total} bytes")
 
 
 async def serve(path: str) -> None:

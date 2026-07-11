@@ -17,10 +17,12 @@ import tempfile
 from typing import Any
 
 from anyio import Path
-from greeter import common_pb2, server_grpc
+from services import Greeter
+
+import greeter2.greeter.common as common_pb2
+import greeter2.greeter.server as server_grpc
 from grpclib_transports import SshChannel, SshTransport
 from grpclib_transports.protocol import serve_h2
-from services import Greeter
 
 
 async def main() -> None:
@@ -68,7 +70,7 @@ async def main() -> None:
                 stdin, stdout, _ = await conn.open_session(encoding=None)  # pyright: ignore[reportUnknownVariableType,reportUnknownMemberType] -- asyncssh type stubs are incomplete
                 channel = SshChannel(stdout, stdin)
                 stub = server_grpc.GreeterStub(channel)
-                response = await stub.SayHello(common_pb2.HelloRequest(name="SSH"))
+                response = await stub.say_hello(common_pb2.HelloRequest(name="SSH"))
                 assert response.message == "Hello, SSH!"
                 print(f"Greeter replied: {response.message}")
             finally:

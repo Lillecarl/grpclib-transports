@@ -4,13 +4,19 @@ import asyncio
 import contextlib
 import os
 import tempfile
-from typing import Any
+from typing import TYPE_CHECKING
 
 from anyio import Path
-from greeter import common_pb2, server_grpc
+
+import greeter2.greeter.common as common_pb2
+import greeter2.greeter.server as server_grpc
+from greeter2.greeter.common import HelloReply, HelloRequest
 from grpclib_transports.client import connect_unix
 from grpclib_transports.example.server import Greeter
 from grpclib_transports.server import Server
+
+if TYPE_CHECKING:
+    from collections.abc import AsyncIterator
 
 
 class _BlockingGreeter(server_grpc.GreeterBase):
@@ -21,10 +27,7 @@ class _BlockingGreeter(server_grpc.GreeterBase):
         self.active = 0
         self.max_active = 0
 
-    async def SayHello(self, stream: Any) -> None:  # noqa: N802 -- gRPC method name from protobuf
-        request = await stream.recv_message()
-        if request is None:
-            return
+    async def say_hello(self, message: HelloRequest) -> HelloReply:
         self.started += 1
         self.active += 1
         self.max_active = max(self.max_active, self.active)
@@ -32,10 +35,10 @@ class _BlockingGreeter(server_grpc.GreeterBase):
             self.first_entered.set()
             await self.release_first.wait()
         self.active -= 1
-        await stream.send_message(common_pb2.HelloReply(message=f"Hello, {request.name}!"))
+        return HelloReply(message=f"Hello, {message.name}!")
 
-    async def Upload(self, stream: Any) -> None:  # noqa: N802 -- gRPC method name from protobuf
-        await stream.send_message(common_pb2.HelloReply(message="unused"))
+    async def upload(self, messages: AsyncIterator[HelloRequest]) -> HelloReply:
+        return HelloReply(message="unused")
 
 
 async def test_unix_socket() -> None:
@@ -49,7 +52,7 @@ async def test_unix_socket() -> None:
             channel = connect_unix(sock_path)
             try:
                 stub = server_grpc.GreeterStub(channel)
-                response = await stub.SayHello(common_pb2.HelloRequest(name="Test"))
+                response = await stub.say_hello(common_pb2.HelloRequest(name="Test"))
                 assert response.message == "Hello, Test!"
             finally:
                 channel.close()
@@ -71,11 +74,11 @@ async def test_endpoint_max_concurrency_limits_handler_entry() -> None:
             try:
                 stub = server_grpc.GreeterStub(channel)
                 first = asyncio.create_task(
-                    stub.SayHello(common_pb2.HelloRequest(name="First")),
+                    stub.say_hello(common_pb2.HelloRequest(name="First")),
                     name="first-limited-rpc",
                 )
                 second = asyncio.create_task(
-                    stub.SayHello(common_pb2.HelloRequest(name="Second")),
+                    stub.say_hello(common_pb2.HelloRequest(name="Second")),
                     name="second-limited-rpc",
                 )
                 await greeter.first_entered.wait()

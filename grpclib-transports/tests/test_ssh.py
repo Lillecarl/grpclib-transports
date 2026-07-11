@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import contextlib
 import os
 import socket
@@ -6,7 +8,10 @@ from typing import Any
 
 import asyncssh
 from anyio import Path
-from greeter import common_pb2, server_grpc, worker_grpc
+
+import greeter2.greeter.common as common_pb2
+import greeter2.greeter.server as server_grpc
+import greeter2.greeter.worker as worker_grpc
 from grpclib_transports.example.server import Greeter, WorkerGreeter
 from grpclib_transports.protocol import DEFAULT_TUNING, serve_h2
 from grpclib_transports.ssh import SshTransport, connect_ssh, connect_ssh_stdio
@@ -73,7 +78,7 @@ async def test_ssh_transport() -> None:
                 ],
             ) as channel:
                 stub = server_grpc.GreeterStub(channel)
-                response = await stub.SayHello(common_pb2.HelloRequest(name="SSH"))
+                response = await stub.say_hello(common_pb2.HelloRequest(name="SSH"))
                 assert response.message == "Hello, SSH!"
         finally:
             acceptor.close()
@@ -119,7 +124,7 @@ async def test_ssh_stdio_command_transport() -> None:
                 sock=client_sock,
             ) as channel:
                 stub = worker_grpc.GreeterWorkerStub(channel)
-                response = await stub.SayHello(common_pb2.HelloRequest(name="SSH stdio"))
+                response = await stub.say_hello(common_pb2.HelloRequest(name="SSH stdio"))
                 assert response.message == "Hello, SSH stdio!"
         finally:
             acceptor.close()

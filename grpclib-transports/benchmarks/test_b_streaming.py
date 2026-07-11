@@ -12,8 +12,11 @@ from typing import Any
 import pytest
 from anyio import Path
 from conftest import BENCH_SAMPLES, bump_pipe_buf, report_bench, run_bench
-from greeter import common_pb2, server_grpc, worker_grpc
 from grpclib.client import Channel
+
+import greeter2.greeter.common as common_pb2
+import greeter2.greeter.server as server_grpc
+import greeter2.greeter.worker as worker_grpc
 from grpclib_transports.protocol import DEFAULT_TUNING, make_config
 from grpclib_transports.stdio import StdioChannel
 from grpclib_transports.transfer import iter_chunks
@@ -28,7 +31,7 @@ UPLOAD_MESSAGES = [
 
 
 async def _upload_once(stub: Any) -> None:
-    response = await stub.Upload(UPLOAD_MESSAGES)
+    response = await stub.upload(UPLOAD_MESSAGES)
     assert response.message == f"Uploaded {TOTAL_SIZE} bytes"
 
 

@@ -11,11 +11,14 @@ import traceback
 from pathlib import Path
 from typing import Any
 
-from greeter import common_pb2, server_grpc, worker_grpc
-from grpclib_transports.protocol import DEFAULT_TUNING
-from grpclib_transports.stdio import bump_subprocess_pipe_buffers
 from rich.console import Console
 from rich.table import Table
+
+import greeter2.greeter.common as common_pb2
+import greeter2.greeter.server as server_grpc
+import greeter2.greeter.worker as worker_grpc
+from grpclib_transports.protocol import DEFAULT_TUNING
+from grpclib_transports.stdio import bump_subprocess_pipe_buffers
 
 logging.getLogger("h2").setLevel(logging.WARNING)
 logging.getLogger("asyncssh").setLevel(logging.WARNING)
@@ -145,9 +148,9 @@ def _dump_profile(label: str, path_to_timeline: str) -> Path:
 
 async def _bench_warmup(stub: Any, req: Any, parallelism: int = 1) -> None:
     if parallelism == 1:
-        await stub.SayHello(req)
+        await stub.say_hello(req)
     else:
-        warmup = [asyncio.create_task(stub.SayHello(req)) for _ in range(parallelism)]
+        warmup = [asyncio.create_task(stub.say_hello(req)) for _ in range(parallelism)]
         await asyncio.gather(*warmup)
 
 
@@ -155,7 +158,7 @@ async def _bench_once(stub: Any, req: Any, count: int, parallelism: int = 1) -> 
     if parallelism == 1:
         start = time.perf_counter()
         for _ in range(count):
-            await stub.SayHello(req)
+            await stub.say_hello(req)
         return time.perf_counter() - start
 
     q: asyncio.Queue[None] = asyncio.Queue()
@@ -168,7 +171,7 @@ async def _bench_once(stub: Any, req: Any, count: int, parallelism: int = 1) -> 
                 q.get_nowait()
             except asyncio.QueueEmpty:
                 return
-            await stub.SayHello(req)
+            await stub.say_hello(req)
 
     start = time.perf_counter()
     workers = [asyncio.create_task(worker()) for _ in range(parallelism)]

@@ -2,57 +2,43 @@
 
 from __future__ import annotations
 
-from typing import Any, override
+from typing import TYPE_CHECKING, override
 
-from greeter import common_pb2, server_grpc, worker_grpc
+import greeter2.greeter.server as server_grpc
+import greeter2.greeter.worker as worker_grpc
+from greeter2.greeter.common import HelloReply, HelloRequest, ManagerLookupReply, ManagerLookupRequest
+
+if TYPE_CHECKING:
+    from collections.abc import AsyncIterator
 
 
 class Greeter(server_grpc.GreeterBase):
     @override
-    async def SayHello(self, stream: Any) -> None:
-        request = await stream.recv_message()
-        if request is None:
-            return
-        reply = common_pb2.HelloReply(message=f"Hello, {request.name}!")
-        await stream.send_message(reply)
+    async def say_hello(self, message: HelloRequest) -> HelloReply:
+        return HelloReply(message=f"Hello, {message.name}!")
 
     @override
-    async def Upload(self, stream: Any) -> None:
+    async def upload(self, messages: AsyncIterator[HelloRequest]) -> HelloReply:
         total = 0
-        while True:
-            request = await stream.recv_message()
-            if request is None:
-                break
+        async for request in messages:
             total += len(request.payload)
-        reply = common_pb2.HelloReply(message=f"Uploaded {total} bytes")
-        await stream.send_message(reply)
+        return HelloReply(message=f"Uploaded {total} bytes")
 
 
 class WorkerGreeter(worker_grpc.GreeterWorkerBase):
     @override
-    async def SayHello(self, stream: Any) -> None:
-        request = await stream.recv_message()
-        if request is None:
-            return
-        reply = common_pb2.HelloReply(message=f"Hello, {request.name}!")
-        await stream.send_message(reply)
+    async def say_hello(self, message: HelloRequest) -> HelloReply:
+        return HelloReply(message=f"Hello, {message.name}!")
 
     @override
-    async def Upload(self, stream: Any) -> None:
+    async def upload(self, messages: AsyncIterator[HelloRequest]) -> HelloReply:
         total = 0
-        while True:
-            request = await stream.recv_message()
-            if request is None:
-                break
+        async for request in messages:
             total += len(request.payload)
-        reply = common_pb2.HelloReply(message=f"Uploaded {total} bytes")
-        await stream.send_message(reply)
+        return HelloReply(message=f"Uploaded {total} bytes")
 
 
 class GreeterManager(worker_grpc.GreeterManagerBase):
     @override
-    async def Lookup(self, stream: Any) -> None:
-        request = await stream.recv_message()
-        if request is None:
-            return
-        await stream.send_message(common_pb2.ManagerLookupReply(value=f"manager:{request.key}"))
+    async def lookup(self, message: ManagerLookupRequest) -> ManagerLookupReply:
+        return ManagerLookupReply(value=f"manager:{message.key}")

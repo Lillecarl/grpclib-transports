@@ -10,7 +10,8 @@ from __future__ import annotations
 import asyncio
 import sys
 
-from greeter import common_pb2, worker_grpc
+import greeter2.greeter.common as common_pb2
+import greeter2.greeter.worker as worker_grpc
 from grpclib_transports import Server
 
 
@@ -32,7 +33,7 @@ async def main() -> None:
             stderr=asyncio.subprocess.PIPE,
         ) as pool:
             stub = pool[0].client
-            response = await stub.SayHello(common_pb2.HelloRequest(name="Stdio"))
+            response = await stub.say_hello(common_pb2.HelloRequest(name="Stdio"))
             assert response.message == "Hello, Stdio!"
             print(f"Greeter replied: {response.message}")
 

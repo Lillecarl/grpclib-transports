@@ -13,7 +13,7 @@ let
       inherit betterproto2 betterproto2-compiler;
     };
     grpclib-transports = pkgs.python3Packages.callPackage ./grpclib-transports {
-      inherit greeter-proto;
+      inherit greeter-proto2;
     };
     pre-commit = pkgs.callPackage ./nix/pkgs/pre-commit { };
     shell = pkgs.python3Packages.callPackage ./nix/shell.nix {

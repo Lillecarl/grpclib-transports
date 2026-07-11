@@ -9,9 +9,11 @@ from __future__ import annotations
 
 import asyncio
 
-from greeter import common_pb2, worker_grpc
-from grpclib_transports import Server
 from services import WorkerGreeter
+
+import greeter2.greeter.common as common_pb2
+import greeter2.greeter.worker as worker_grpc
+from grpclib_transports import Server
 
 
 def worker_services() -> list[WorkerGreeter]:
@@ -25,11 +27,11 @@ async def main() -> None:
         async with workers.multiprocessing_channels(
             worker_services,
             client_factory=worker_grpc.GreeterWorkerStub,
-            preload=["greeter"],
+            preload=["greeter2"],
             max_concurrency=1,
         ) as pool:
             stub = pool[0].client
-            response = await stub.SayHello(common_pb2.HelloRequest(name="Multiprocessing"))
+            response = await stub.say_hello(common_pb2.HelloRequest(name="Multiprocessing"))
             assert response.message == "Hello, Multiprocessing!"
             print(f"Greeter replied: {response.message}")
 

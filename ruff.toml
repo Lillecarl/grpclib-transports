@@ -15,11 +15,6 @@ ignore = [
 
 [lint.isort]
 known-first-party = [
-  "nanopynix",
-  "nanopynix_expr",
-  "nanopynix_fetchers",
-  "nanopynix_flake",
-  "nanopynix_main",
-  "nanopynix_store",
-  "nanopynix_util",
+  "greeter2",
+  "grpclib_transports",
 ]

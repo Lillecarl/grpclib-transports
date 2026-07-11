@@ -13,9 +13,11 @@ import os
 import tempfile
 
 from anyio import Path
-from greeter import common_pb2, server_grpc
-from grpclib_transports import Server, connect_unix
 from services import Greeter
+
+import greeter2.greeter.common as common_pb2
+import greeter2.greeter.server as server_grpc
+from grpclib_transports import Server, connect_unix
 
 
 async def main() -> None:
@@ -29,7 +31,7 @@ async def main() -> None:
             channel = connect_unix(sock)
             try:
                 stub = server_grpc.GreeterStub(channel)
-                response = await stub.SayHello(common_pb2.HelloRequest(name="World"))
+                response = await stub.say_hello(common_pb2.HelloRequest(name="World"))
                 assert response.message == "Hello, World!"
                 print(f"Greeter replied: {response.message}")
             finally:

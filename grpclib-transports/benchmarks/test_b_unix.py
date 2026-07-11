@@ -9,6 +9,7 @@ from anyio import Path
 from conftest import LARGE_COUNT, LARGE_PAYLOAD, SMALL_COUNT, SMALL_PAYLOAD, bench, run_bench
 from grpclib.client import Channel
 from grpclib.server import Server as GrpcServer
+
 from grpclib_transports.example.server import Greeter
 from grpclib_transports.protocol import make_config
 
