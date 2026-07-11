@@ -8,7 +8,7 @@ import asyncssh
 from demo import demo_grpc, demo_pb2
 from grpclib_transports.example.server import Greeter
 from grpclib_transports.protocol import DEFAULT_TUNING, serve_h2
-from grpclib_transports.ssh import SshChannel, SshTransport
+from grpclib_transports.ssh import SshTransport, connect_ssh
 
 
 class _TestSSHServer(asyncssh.SSHServer):
@@ -50,32 +50,23 @@ def test_ssh_transport():
             client_sock = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
             client_sock.connect(sock_path)
 
-            conn = await asyncssh.connect(
-                sock=client_sock,
+            async with connect_ssh(
+                "localhost",
                 known_hosts=None,
                 username="test",
                 password="test",
+                sock=client_sock,
                 encryption_algs=[
                     "aes256-gcm@openssh.com", "aes128-gcm@openssh.com",
                     "aes256-ctr", "aes192-ctr", "aes128-ctr",
                     "chacha20-poly1305@openssh.com",
                 ],
-            )
-            try:
-                stdin, stdout, _stderr = await conn.open_session(
-                    encoding=None
-                )
-
-                channel = SshChannel(stdout, stdin)
+            ) as channel:
                 stub = demo_grpc.GreeterStub(channel)
                 response = await stub.SayHello(
                     demo_pb2.HelloRequest(name="SSH")
                 )
                 assert response.message == "Hello, SSH!"
-
-                channel.close()
-            finally:
-                conn.close()
         finally:
             acceptor.close()
             await acceptor.wait_closed()

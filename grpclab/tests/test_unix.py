@@ -5,8 +5,8 @@ from pathlib import Path
 
 from demo import demo_grpc, demo_pb2
 from grpclib_transports.example.server import Greeter
-from grpclib.client import Channel
-from grpclib.server import Server
+from grpclib_transports.client import connect_unix
+from grpclib_transports.server import Server
 
 
 def test_unix_socket():
@@ -14,9 +14,9 @@ def test_unix_socket():
 
     async def run():
         server = Server([Greeter()])
-        await server.start(path=sock_path)
+        await server.start_unix(sock_path)
         try:
-            channel = Channel(path=sock_path)
+            channel = connect_unix(sock_path)
             stub = demo_grpc.GreeterStub(channel)
             response = await stub.SayHello(demo_pb2.HelloRequest(name="Test"))
             assert response.message == "Hello, Test!"
