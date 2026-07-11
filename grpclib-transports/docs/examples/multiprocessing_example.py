@@ -11,7 +11,7 @@ import asyncio
 
 from greeter import common_pb2, worker_grpc
 from grpclib_transports import Server
-from grpclib_transports.example.server import WorkerGreeter
+from services import WorkerGreeter
 
 
 def worker_services() -> list[WorkerGreeter]:

@@ -19,8 +19,8 @@ from typing import Any
 from anyio import Path
 from greeter import common_pb2, server_grpc
 from grpclib_transports import SshChannel, SshTransport
-from grpclib_transports.example.server import Greeter
 from grpclib_transports.protocol import serve_h2
+from services import Greeter
 
 
 async def main() -> None:

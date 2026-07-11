@@ -15,7 +15,7 @@ import tempfile
 from anyio import Path
 from greeter import common_pb2, server_grpc
 from grpclib_transports import Server, connect_unix
-from grpclib_transports.example.server import Greeter
+from services import Greeter
 
 
 async def main() -> None:
