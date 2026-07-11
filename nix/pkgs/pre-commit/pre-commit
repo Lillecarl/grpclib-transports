@@ -1,0 +1,7 @@
+#! /usr/bin/env bash
+echo PWD: "$PWD"
+set -x
+pyright
+ruff check --fix
+ruff check --fix --config ruff-strict.toml
+treefmt

@@ -9,6 +9,7 @@
   sphinx,
   myst-parser,
   furo,
+  pre-commit, # overridden pre-commit script
   # formatters
   treefmt,
   nixfmt,
@@ -31,6 +32,7 @@ in
 mkShell {
   packages = [
     pythonEnv
+    pre-commit
     pyright
     ruff
     treefmt
