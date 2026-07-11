@@ -1,16 +1,20 @@
 from __future__ import annotations
 
 import socket
-from collections.abc import Collection
+from collections.abc import Collection, Mapping, Sequence
 from pathlib import Path
 from ssl import SSLContext
-from typing import Any
+from typing import Any, TypeVar
 
 from grpclib._typing import IServable
 from grpclib.encoding.base import CodecBase, StatusDetailsCodecBase
 from grpclib.server import Server as GrpclibServer
 
+from grpclib_transports.bidi import LogicalRpcPeer
 from grpclib_transports.protocol import DEFAULT_TUNING, TransportTuning, make_config
+from grpclib_transports.workers import PeerFactory, StdioPeerPool
+
+PeerT = TypeVar("PeerT", bound=LogicalRpcPeer)
 
 
 class Server:
@@ -90,6 +94,26 @@ class Server:
             ssl=ssl,
             reuse_address=reuse_address,
             reuse_port=reuse_port,
+        )
+
+    def stdio_peer_pool(
+        self,
+        argv: Sequence[str | Path],
+        *,
+        peer_factory: PeerFactory[PeerT],
+        size: int = 1,
+        cwd: str | Path | None = None,
+        env: Mapping[str, str] | None = None,
+        stderr: Any = None,
+    ) -> StdioPeerPool[PeerT]:
+        return StdioPeerPool(
+            argv,
+            peer_factory=peer_factory,
+            size=size,
+            tuning=self.tuning,
+            cwd=cwd,
+            env=env,
+            stderr=stderr,
         )
 
     def close(self) -> None:
