@@ -4,7 +4,14 @@
 let
   self = rec {
     inherit pkgs;
+    betterproto2 = pkgs.python3Packages.callPackage ./nix/pkgs/betterproto2 { };
+    betterproto2-compiler = pkgs.python3Packages.callPackage ./nix/pkgs/betterproto2_compiler {
+      inherit betterproto2;
+    };
     greeter-proto = pkgs.python3Packages.callPackage ./greeter-proto { };
+    greeter-proto2 = pkgs.python3Packages.callPackage ./greeter-proto2 {
+      inherit betterproto2 betterproto2-compiler;
+    };
     grpclib-transports = pkgs.python3Packages.callPackage ./grpclib-transports {
       inherit greeter-proto;
     };

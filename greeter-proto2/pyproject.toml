@@ -1,0 +1,11 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "greeter2"
+version = "0.1.0"
+description = "Demo gRPC protobuf definitions (betterproto2 compiled)"
+authors = [{ name = "Carl Andersson", email = "github@lillecarl.com" }]
+requires-python = ">=3.12"
+dependencies = []
