@@ -30,6 +30,6 @@ mkShell {
     ruff
   ];
   shellHook = ''
-    export PYTHONPATH="$PWD/grpclab/src:$PYTHONPATH"
+    export PYTHONPATH="$PWD/grpclib-transports/src:$PYTHONPATH"
   '';
 }

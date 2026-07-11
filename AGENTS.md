@@ -15,7 +15,7 @@ masked by `tail`, for example:
 
 The saved log is the source of truth. Use the short live summary only to decide
 what to inspect next, then query `/tmp/pytest.log` for the full failure context.
-Do not use timeouts longer than 30 seconds for `grpclab/tests`; these tests
+Do not use timeouts longer than 30 seconds for `grpclib-transports/tests`; these tests
 should never take that long, and the shorter timeout catches hangs quickly.
 
 # Python coding conventions
@@ -60,5 +60,5 @@ should never take that long, and the shorter timeout catches hangs quickly.
 - nix build --no-link --print-out-paths --file . pkgs.python3Packages.h2.src # download and print location of h2 source (example package)
 - direnv exec . ruff check --fix # run ruff and fix what it can
 - direnv exec . pyright . # typechecking 
-- timeout 30 direnv exec . pytest grpclab/benchmarks # benchmark tests
-- timeout 30 direnv exec . pytest grpclab/tests # simple functionality tests
+- timeout 30 direnv exec . pytest grpclib-transports/benchmarks # benchmark tests
+- timeout 30 direnv exec . pytest grpclib-transports/tests # simple functionality tests
