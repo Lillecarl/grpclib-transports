@@ -2,13 +2,15 @@
 
 from __future__ import annotations
 
-from pathlib import Path
-from ssl import SSLContext
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 from grpclib.client import Channel
 
 from grpclib_transports.protocol import DEFAULT_TUNING, TransportTuning, make_config
+
+if TYPE_CHECKING:
+    from pathlib import Path
+    from ssl import SSLContext
 
 
 def connect_unix(

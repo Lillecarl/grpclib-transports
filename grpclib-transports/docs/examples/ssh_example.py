@@ -58,6 +58,7 @@ async def main() -> None:
                 username="x",
                 password="x",
             )
+            channel = None
             try:
                 stdin, stdout, _ = await conn.open_session(encoding=None)
                 channel = SshChannel(stdout, stdin)
@@ -66,7 +67,8 @@ async def main() -> None:
                 assert response.message == "Hello, SSH!"
                 print(f"Greeter replied: {response.message}")
             finally:
-                await channel.aclose()
+                if channel is not None:
+                    await channel.aclose()
                 conn.close()
         finally:
             acceptor.close()

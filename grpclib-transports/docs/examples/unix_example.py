@@ -20,6 +20,7 @@ async def main() -> None:
     sock = tempfile.mktemp(suffix=".sock")
     server = Server([Greeter()])
     await server.start_unix(sock)
+    channel = None
     try:
         channel = connect_unix(sock)
         stub = greeter_grpc.GreeterStub(channel)
@@ -27,7 +28,8 @@ async def main() -> None:
         assert response.message == "Hello, World!"
         print(f"Greeter replied: {response.message}")
     finally:
-        channel.close()
+        if channel is not None:
+            channel.close()
         server.close()
         await server.wait_closed()
         with contextlib.suppress(OSError):

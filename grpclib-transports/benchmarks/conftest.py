@@ -317,10 +317,7 @@ def _build_throughput_table(test_type: str, rows: list[dict]) -> Table:
         for p in parallelisms:
             match = next((r for r in rows if r["transport"] == t and r["parallelism"] == p), None)
             if match:
-                if match["payload_size"]:
-                    thr = _fmt_mb(match["mb_per_sec"])
-                else:
-                    thr = _fmt_msgs(match["msgs_per_sec"])
+                thr = _fmt_mb(match["mb_per_sec"]) if match["payload_size"] else _fmt_msgs(match["msgs_per_sec"])
                 spread = _fmt_spread(match["sample_rates"])
                 vals.append(f"{thr}\n{spread}")
             else:

@@ -9,10 +9,9 @@ from __future__ import annotations
 import asyncio
 import contextlib
 import os
-from typing import Any, BinaryIO
+from typing import TYPE_CHECKING, Any, BinaryIO
 
 from grpclib import client
-from grpclib.protocol import H2Protocol
 
 from grpclib_transports.protocol import (
     DEFAULT_TUNING,
@@ -25,6 +24,9 @@ from grpclib_transports.protocol import (
     pump,
     resume_h2_protocol,
 )
+
+if TYPE_CHECKING:
+    from grpclib.protocol import H2Protocol
 
 
 class PipeTransport(BaseCustomTransport):

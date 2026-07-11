@@ -2,10 +2,13 @@
 
 from __future__ import annotations
 
-from collections.abc import Iterator
 from pathlib import Path
+from typing import TYPE_CHECKING
 
 from grpclib_transports.protocol import DEFAULT_TUNING
+
+if TYPE_CHECKING:
+    from collections.abc import Iterator
 
 
 def iter_chunks(data: bytes | bytearray | memoryview, chunk_size: int) -> Iterator[bytes]:

@@ -42,13 +42,11 @@ class LogicalFrame:
 class RemoteCallError(Exception):
     """Raised when a remote peer responds with an error."""
 
-    pass
 
 
 class PeerClosedError(Exception):
     """Raised when an operation is attempted on a closed peer."""
 
-    pass
 
 
 class LogicalRpcPeer:

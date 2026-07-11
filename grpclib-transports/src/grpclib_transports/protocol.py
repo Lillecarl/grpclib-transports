@@ -14,13 +14,10 @@ import pwd
 import re
 import socket
 import struct
-from collections.abc import Sequence
 from dataclasses import dataclass
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
-from grpclib._typing import IServable
 from grpclib.config import Configuration
-from grpclib.const import Handler
 from grpclib.encoding.proto import ProtoCodec
 from grpclib.events import _DispatchServerEvents
 from grpclib.protocol import H2Protocol
@@ -31,6 +28,12 @@ from h2.errors import ErrorCodes
 from h2.exceptions import StreamClosedError, StreamIDTooLowError
 from h2.settings import SettingCodes
 from hyperframe.frame import RstStreamFrame
+
+if TYPE_CHECKING:
+    from collections.abc import Sequence
+
+    from grpclib._typing import IServable
+    from grpclib.const import Handler
 
 _SIZE_UNITS = {
     "": 1,

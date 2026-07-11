@@ -6,19 +6,21 @@ import contextlib
 import itertools
 from collections.abc import Awaitable, Callable, Iterator, Mapping, Sequence
 from dataclasses import dataclass, field
-from pathlib import Path
-from typing import Any, Generic, TypeVar
+from typing import TYPE_CHECKING, Any, TypeVar
 
 from grpclib_transports.bidi import LogicalRpcPeer
 from grpclib_transports.protocol import DEFAULT_TUNING, TransportTuning
 from grpclib_transports.stdio import StdioChannel, stdio_worker
+
+if TYPE_CHECKING:
+    from pathlib import Path
 
 PeerT = TypeVar("PeerT", bound=LogicalRpcPeer)
 PeerFactory = Callable[[StdioChannel], Awaitable[PeerT]]
 
 
 @dataclass(frozen=True)
-class RegisteredPeer(Generic[PeerT]):
+class RegisteredPeer[PeerT: LogicalRpcPeer]:
     """A :class:`LogicalRpcPeer` registered with an ID and optional metadata.
 
     Delegates :meth:`call` and :meth:`event` to the wrapped peer.
@@ -41,7 +43,7 @@ class RegisteredPeer(Generic[PeerT]):
         await self.peer.event(method, payload)
 
 
-class PeerRegistry(Generic[PeerT]):
+class PeerRegistry[PeerT: LogicalRpcPeer]:
     """A thread-unsafe registry of :class:`RegisteredPeer` instances.
 
     Supports :func:`len`, iteration, and snapshot via :meth:`snapshot`.
@@ -100,7 +102,7 @@ class PeerRegistry(Generic[PeerT]):
             self.unregister(registered.id)
 
 
-class StdioPeerPool(Generic[PeerT]):
+class StdioPeerPool[PeerT: LogicalRpcPeer]:
     """A pool of *size* subprocess workers, each bridged by a :class:`LogicalRpcPeer`.
 
     Use as an async context manager.  On enter, spawns *size* child processes

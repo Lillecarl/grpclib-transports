@@ -98,3 +98,11 @@ known-first-party = [
 
 [format]
 docstring-code-format = true
+
+[lint.per-file-ignores]
+"docs/examples/*" = ["T201"]
+"grpclib-transports/docs/examples/*" = ["T201"]
+"docs/conf.py" = ["A001"]
+"grpclib-transports/tests/*" = ["PT017"]
+"grpclib-transports/src/grpclib_transports/bidi.py" = ["ASYNC109"]
+"grpclib-transports/src/grpclib_transports/workers.py" = ["ASYNC109"]

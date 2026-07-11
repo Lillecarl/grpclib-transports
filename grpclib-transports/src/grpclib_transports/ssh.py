@@ -6,12 +6,10 @@ import asyncio
 import contextlib
 import importlib.util
 import signal
-from collections.abc import AsyncIterator
 from dataclasses import dataclass
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 from grpclib import client
-from grpclib.protocol import H2Protocol
 
 from grpclib_transports.protocol import (
     DEFAULT_TUNING,
@@ -25,6 +23,11 @@ from grpclib_transports.protocol import (
     serve_h2,
     signal_stop,
 )
+
+if TYPE_CHECKING:
+    from collections.abc import AsyncIterator
+
+    from grpclib.protocol import H2Protocol
 
 _ASYNCSSH_AVAILABLE = importlib.util.find_spec("asyncssh") is not None
 

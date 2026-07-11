@@ -6,12 +6,9 @@ import asyncio
 import contextlib
 import fcntl
 import sys
-from collections.abc import AsyncIterator, Mapping, Sequence
-from pathlib import Path
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 from grpclib import client
-from grpclib.protocol import H2Protocol
 
 from grpclib_transports.protocol import (
     DEFAULT_TUNING,
@@ -25,6 +22,12 @@ from grpclib_transports.protocol import (
     resume_h2_protocol,
     serve_h2,
 )
+
+if TYPE_CHECKING:
+    from collections.abc import AsyncIterator, Mapping, Sequence
+    from pathlib import Path
+
+    from grpclib.protocol import H2Protocol
 
 _SUBPROCESS_CLOSE_TIMEOUT = 5.0
 

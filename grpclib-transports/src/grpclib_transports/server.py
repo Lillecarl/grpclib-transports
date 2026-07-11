@@ -3,18 +3,21 @@
 from __future__ import annotations
 
 import socket
-from collections.abc import Collection, Mapping, Sequence
-from pathlib import Path
-from ssl import SSLContext
-from typing import Any, TypeVar
+from typing import TYPE_CHECKING, Any, TypeVar
 
-from grpclib._typing import IServable
-from grpclib.encoding.base import CodecBase, StatusDetailsCodecBase
 from grpclib.server import Server as GrpclibServer
 
 from grpclib_transports.bidi import LogicalRpcPeer
 from grpclib_transports.protocol import DEFAULT_TUNING, TransportTuning, make_config
 from grpclib_transports.workers import PeerFactory, StdioPeerPool
+
+if TYPE_CHECKING:
+    from collections.abc import Collection, Mapping, Sequence
+    from pathlib import Path
+    from ssl import SSLContext
+
+    from grpclib._typing import IServable
+    from grpclib.encoding.base import CodecBase, StatusDetailsCodecBase
 
 PeerT = TypeVar("PeerT", bound=LogicalRpcPeer)
 

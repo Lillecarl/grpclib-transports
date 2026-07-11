@@ -4,12 +4,14 @@ from __future__ import annotations
 
 import multiprocessing as mp
 import os
-from collections.abc import Sequence
 from dataclasses import dataclass
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 from grpclib_transports.pipes import PipeChannel, pipe_streams_from_fds
 from grpclib_transports.protocol import DEFAULT_TUNING, TransportTuning
+
+if TYPE_CHECKING:
+    from collections.abc import Sequence
 
 
 def get_forkserver_context(
