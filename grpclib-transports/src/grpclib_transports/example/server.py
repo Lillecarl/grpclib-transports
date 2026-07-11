@@ -4,9 +4,9 @@ import asyncio
 import signal
 import typing
 
+import greeter.greeter.common as common_pb2
 import greeter.greeter.server as server_grpc
 import greeter.greeter.worker as worker_grpc
-from greeter.greeter.common import HelloReply, HelloRequest
 from grpclib_transports.protocol import signal_stop
 from grpclib_transports.server import Server
 
@@ -16,28 +16,28 @@ if typing.TYPE_CHECKING:
 
 class Greeter(server_grpc.GreeterBase):
     @typing.override
-    async def say_hello(self, message: HelloRequest) -> HelloReply:
-        return HelloReply(message=f"Hello, {message.name}!")
+    async def say_hello(self, message: common_pb2.HelloRequest) -> common_pb2.HelloReply:
+        return common_pb2.HelloReply(message=f"Hello, {message.name}!")
 
     @typing.override
-    async def upload(self, messages: AsyncIterator[HelloRequest]) -> HelloReply:
+    async def upload(self, messages: AsyncIterator[common_pb2.HelloRequest]) -> common_pb2.HelloReply:
         total = 0
         async for request in messages:
             total += len(request.payload)
-        return HelloReply(message=f"Uploaded {total} bytes")
+        return common_pb2.HelloReply(message=f"Uploaded {total} bytes")
 
 
 class WorkerGreeter(worker_grpc.GreeterWorkerBase):
     @typing.override
-    async def say_hello(self, message: HelloRequest) -> HelloReply:
-        return HelloReply(message=f"Hello, {message.name}!")
+    async def say_hello(self, message: common_pb2.HelloRequest) -> common_pb2.HelloReply:
+        return common_pb2.HelloReply(message=f"Hello, {message.name}!")
 
     @typing.override
-    async def upload(self, messages: AsyncIterator[HelloRequest]) -> HelloReply:
+    async def upload(self, messages: AsyncIterator[common_pb2.HelloRequest]) -> common_pb2.HelloReply:
         total = 0
         async for request in messages:
             total += len(request.payload)
-        return HelloReply(message=f"Uploaded {total} bytes")
+        return common_pb2.HelloReply(message=f"Uploaded {total} bytes")
 
 
 async def serve(path: str) -> None:

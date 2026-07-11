@@ -4,6 +4,7 @@
   buildPythonPackage,
   hatchling,
   # deps
+  betterproto2,
   grpclib,
   h2,
   asyncssh ? null,
@@ -23,6 +24,7 @@ buildPythonPackage {
   build-system = [ hatchling ];
 
   dependencies = [
+    betterproto2
     grpclib
     h2
   ]

@@ -10,7 +10,6 @@ from anyio import Path
 
 import greeter.greeter.common as common_pb2
 import greeter.greeter.server as server_grpc
-from greeter.greeter.common import HelloReply, HelloRequest
 from grpclib_transports.client import connect_unix
 from grpclib_transports.example.server import Greeter
 from grpclib_transports.server import Server
@@ -27,7 +26,7 @@ class _BlockingGreeter(server_grpc.GreeterBase):
         self.active = 0
         self.max_active = 0
 
-    async def say_hello(self, message: HelloRequest) -> HelloReply:
+    async def say_hello(self, message: common_pb2.HelloRequest) -> common_pb2.HelloReply:
         self.started += 1
         self.active += 1
         self.max_active = max(self.max_active, self.active)
@@ -35,10 +34,10 @@ class _BlockingGreeter(server_grpc.GreeterBase):
             self.first_entered.set()
             await self.release_first.wait()
         self.active -= 1
-        return HelloReply(message=f"Hello, {message.name}!")
+        return common_pb2.HelloReply(message=f"Hello, {message.name}!")
 
-    async def upload(self, messages: AsyncIterator[HelloRequest]) -> HelloReply:
-        return HelloReply(message="unused")
+    async def upload(self, messages: AsyncIterator[common_pb2.HelloRequest]) -> common_pb2.HelloReply:
+        return common_pb2.HelloReply(message="unused")
 
 
 async def test_unix_socket() -> None:

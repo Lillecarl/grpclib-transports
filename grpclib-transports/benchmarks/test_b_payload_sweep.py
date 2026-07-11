@@ -7,8 +7,8 @@ import sys
 import tempfile
 
 import pytest
+from _bench_utils import bench, bench_worker, bump_pipe_buf, run_bench
 from anyio import Path
-from conftest import bench, bench_worker, bump_pipe_buf, run_bench
 from grpclib.client import Channel
 
 from grpclib_transports.protocol import make_config

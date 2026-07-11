@@ -5,7 +5,7 @@ import os
 import sys
 from typing import Any
 
-from conftest import STARTUP_COUNT, bench_lifecycle, run_bench
+from _bench_utils import STARTUP_COUNT, bench_lifecycle, run_bench
 
 import greeter.greeter.common as common_pb2
 import greeter.greeter.worker as worker_grpc

@@ -5,8 +5,8 @@ import sys
 import tempfile
 
 import pytest
+from _bench_utils import LARGE_COUNT, LARGE_PAYLOAD, SMALL_COUNT, SMALL_PAYLOAD, bench, run_bench
 from anyio import Path
-from conftest import LARGE_COUNT, LARGE_PAYLOAD, SMALL_COUNT, SMALL_PAYLOAD, bench, run_bench
 from grpclib.client import Channel
 from grpclib.server import Server as GrpcServer
 

@@ -10,8 +10,8 @@ import time
 from typing import Any
 
 import pytest
+from _bench_utils import BENCH_SAMPLES, bump_pipe_buf, report_bench, run_bench
 from anyio import Path
-from conftest import BENCH_SAMPLES, bump_pipe_buf, report_bench, run_bench
 from grpclib.client import Channel
 
 import greeter.greeter.common as common_pb2
@@ -24,14 +24,17 @@ from grpclib_transports.transfer import iter_chunks
 TOTAL_SIZE = 8 * 1024 * 1024
 UPLOAD_COUNT = 2
 UPLOAD_DATA = os.urandom(TOTAL_SIZE)
-UPLOAD_MESSAGES = [
-    common_pb2.HelloRequest(name="chunk", payload=chunk)
-    for chunk in iter_chunks(UPLOAD_DATA, DEFAULT_TUNING.transfer_chunk_size)
-]
+
+
+def _upload_messages() -> list[common_pb2.HelloRequest]:
+    return [
+        common_pb2.HelloRequest(name="chunk", payload=chunk)
+        for chunk in iter_chunks(UPLOAD_DATA, DEFAULT_TUNING.transfer_chunk_size)
+    ]
 
 
 async def _upload_once(stub: Any) -> None:
-    response = await stub.upload(UPLOAD_MESSAGES)
+    response = await stub.upload(_upload_messages())
     assert response.message == f"Uploaded {TOTAL_SIZE} bytes"
 
 

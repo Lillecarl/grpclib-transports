@@ -2,7 +2,7 @@ import asyncio
 import sys
 
 import pytest
-from conftest import LARGE_COUNT, LARGE_PAYLOAD, SMALL_COUNT, SMALL_PAYLOAD, bench_worker, bump_pipe_buf, run_bench
+from _bench_utils import LARGE_COUNT, LARGE_PAYLOAD, SMALL_COUNT, SMALL_PAYLOAD, bench_worker, bump_pipe_buf, run_bench
 
 from grpclib_transports.stdio import StdioChannel
 
