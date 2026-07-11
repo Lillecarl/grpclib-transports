@@ -9,7 +9,7 @@
   asyncssh ? null,
   # test inputs
   pytestCheckHook,
-  greeter-proto2,
+  greeter-proto,
   anyio,
   rich,
 }:
@@ -30,7 +30,7 @@ buildPythonPackage {
 
   nativeCheckInputs = [
     pytestCheckHook
-    greeter-proto2
+    greeter-proto
     anyio
     rich
   ];

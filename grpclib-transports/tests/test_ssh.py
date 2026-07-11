@@ -9,9 +9,9 @@ from typing import Any
 import asyncssh
 from anyio import Path
 
-import greeter2.greeter.common as common_pb2
-import greeter2.greeter.server as server_grpc
-import greeter2.greeter.worker as worker_grpc
+import greeter.greeter.common as common_pb2
+import greeter.greeter.server as server_grpc
+import greeter.greeter.worker as worker_grpc
 from grpclib_transports.example.server import Greeter, WorkerGreeter
 from grpclib_transports.protocol import DEFAULT_TUNING, serve_h2
 from grpclib_transports.ssh import SshTransport, connect_ssh, connect_ssh_stdio

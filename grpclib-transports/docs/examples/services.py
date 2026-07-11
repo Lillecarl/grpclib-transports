@@ -4,9 +4,9 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING, override
 
-import greeter2.greeter.server as server_grpc
-import greeter2.greeter.worker as worker_grpc
-from greeter2.greeter.common import HelloReply, HelloRequest, ManagerLookupReply, ManagerLookupRequest
+import greeter.greeter.server as server_grpc
+import greeter.greeter.worker as worker_grpc
+from greeter.greeter.common import HelloReply, HelloRequest, ManagerLookupReply, ManagerLookupRequest
 
 if TYPE_CHECKING:
     from collections.abc import AsyncIterator

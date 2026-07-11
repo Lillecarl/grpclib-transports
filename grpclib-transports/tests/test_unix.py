@@ -8,9 +8,9 @@ from typing import TYPE_CHECKING
 
 from anyio import Path
 
-import greeter2.greeter.common as common_pb2
-import greeter2.greeter.server as server_grpc
-from greeter2.greeter.common import HelloReply, HelloRequest
+import greeter.greeter.common as common_pb2
+import greeter.greeter.server as server_grpc
+from greeter.greeter.common import HelloReply, HelloRequest
 from grpclib_transports.client import connect_unix
 from grpclib_transports.example.server import Greeter
 from grpclib_transports.server import Server

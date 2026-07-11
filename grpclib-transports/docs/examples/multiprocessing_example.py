@@ -11,8 +11,8 @@ import asyncio
 
 from services import WorkerGreeter
 
-import greeter2.greeter.common as common_pb2
-import greeter2.greeter.worker as worker_grpc
+import greeter.greeter.common as common_pb2
+import greeter.greeter.worker as worker_grpc
 from grpclib_transports import Server
 
 
@@ -27,7 +27,7 @@ async def main() -> None:
         async with workers.multiprocessing_channels(
             worker_services,
             client_factory=worker_grpc.GreeterWorkerStub,
-            preload=["greeter2"],
+            preload=["greeter"],
             max_concurrency=1,
         ) as pool:
             stub = pool[0].client

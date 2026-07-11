@@ -15,6 +15,6 @@ ignore = [
 
 [lint.isort]
 known-first-party = [
-  "greeter2",
+  "greeter",
   "grpclib_transports",
 ]

@@ -7,8 +7,8 @@ from typing import Any
 
 from conftest import STARTUP_COUNT, bench_lifecycle, run_bench
 
-import greeter2.greeter.common as common_pb2
-import greeter2.greeter.worker as worker_grpc
+import greeter.greeter.common as common_pb2
+import greeter.greeter.worker as worker_grpc
 from grpclib_transports.example.server import WorkerGreeter
 from grpclib_transports.multiprocessing import (
     MultiprocessingPipeEndpoint,

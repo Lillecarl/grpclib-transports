@@ -4,9 +4,9 @@ import asyncio
 import signal
 import typing
 
-import greeter2.greeter.server as server_grpc
-import greeter2.greeter.worker as worker_grpc
-from greeter2.greeter.common import HelloReply, HelloRequest
+import greeter.greeter.server as server_grpc
+import greeter.greeter.worker as worker_grpc
+from greeter.greeter.common import HelloReply, HelloRequest
 from grpclib_transports.protocol import signal_stop
 from grpclib_transports.server import Server
 

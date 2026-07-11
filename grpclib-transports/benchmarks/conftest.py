@@ -14,9 +14,9 @@ from typing import Any
 from rich.console import Console
 from rich.table import Table
 
-import greeter2.greeter.common as common_pb2
-import greeter2.greeter.server as server_grpc
-import greeter2.greeter.worker as worker_grpc
+import greeter.greeter.common as common_pb2
+import greeter.greeter.server as server_grpc
+import greeter.greeter.worker as worker_grpc
 from grpclib_transports.protocol import DEFAULT_TUNING
 from grpclib_transports.stdio import bump_subprocess_pipe_buffers
 

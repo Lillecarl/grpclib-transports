@@ -2,24 +2,35 @@
   lib,
   buildPythonPackage,
   hatchling,
-  grpcio-tools,
+  protobuf,
+  betterproto2,
+  betterproto2-compiler,
   grpclib,
+  pydantic,
+  grpcio-tools,
   mypy-protobuf,
 }:
 buildPythonPackage {
   pname = "greeter-proto";
-  version = (builtins.fromTOML (builtins.readFile ./pyproject.toml)).project.version;
+  version = "0.1.0";
 
   src = lib.cleanSource ./.;
 
   build-system = [ hatchling ];
   nativeBuildInputs = [
+    protobuf
+    betterproto2-compiler
+    betterproto2
     grpclib
+    pydantic
     mypy-protobuf
     grpcio-tools
   ];
 
   dependencies = [
+    protobuf
+    betterproto2
+    pydantic
     grpclib
     mypy-protobuf
   ];
@@ -28,26 +39,19 @@ buildPythonPackage {
   preBuild = ''
     mkdir -p src/greeter
     touch src/greeter/py.typed
-    touch src/greeter/__init__.py
     protoc \
       --proto_path=. \
-      --python_out="src/greeter" \
-      --grpclib_python_out="src/greeter" \
-      --mypy_out="src/greeter" \
+      --python_betterproto2_out=src/greeter \
+      --python_betterproto2_opt=client_generation=async \
+      --python_betterproto2_opt=server_generation=async \
+      --python_betterproto2_opt=google_protobuf_descriptors \
       common.proto \
       server.proto \
       worker.proto
-
-    for file in src/greeter/*_pb2.py src/greeter/*_pb2.pyi src/greeter/*_grpc.py; do
-      substituteInPlace "$file" \
-        --replace "import common_pb2" "from . import common_pb2" \
-        --replace "import server_pb2" "from . import server_pb2" \
-        --replace "import worker_pb2" "from . import worker_pb2"
-    done
   '';
 
   meta = with lib; {
-    description = "Demo gRPC protobuf library";
+    description = "Demo gRPC protobuf library (betterproto2 compiled)";
     license = licenses.mit;
     platforms = platforms.all;
   };

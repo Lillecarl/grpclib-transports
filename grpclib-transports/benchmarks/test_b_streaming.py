@@ -14,9 +14,9 @@ from anyio import Path
 from conftest import BENCH_SAMPLES, bump_pipe_buf, report_bench, run_bench
 from grpclib.client import Channel
 
-import greeter2.greeter.common as common_pb2
-import greeter2.greeter.server as server_grpc
-import greeter2.greeter.worker as worker_grpc
+import greeter.greeter.common as common_pb2
+import greeter.greeter.server as server_grpc
+import greeter.greeter.worker as worker_grpc
 from grpclib_transports.protocol import DEFAULT_TUNING, make_config
 from grpclib_transports.stdio import StdioChannel
 from grpclib_transports.transfer import iter_chunks

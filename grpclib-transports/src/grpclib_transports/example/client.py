@@ -2,9 +2,9 @@ from __future__ import annotations
 
 from typing import Any
 
-import greeter2.greeter.common as common_pb2
-import greeter2.greeter.server as server_grpc
-import greeter2.greeter.worker as worker_grpc
+import greeter.greeter.common as common_pb2
+import greeter.greeter.server as server_grpc
+import greeter.greeter.worker as worker_grpc
 from grpclib_transports.client import connect_unix
 from grpclib_transports.ssh import connect_ssh
 from grpclib_transports.stdio import StdioChannel, stdio_streams

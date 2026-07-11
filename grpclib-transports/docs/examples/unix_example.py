@@ -15,8 +15,8 @@ import tempfile
 from anyio import Path
 from services import Greeter
 
-import greeter2.greeter.common as common_pb2
-import greeter2.greeter.server as server_grpc
+import greeter.greeter.common as common_pb2
+import greeter.greeter.server as server_grpc
 from grpclib_transports import Server, connect_unix
 
 

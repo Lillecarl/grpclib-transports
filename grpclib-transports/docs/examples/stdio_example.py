@@ -10,8 +10,8 @@ from __future__ import annotations
 import asyncio
 import sys
 
-import greeter2.greeter.common as common_pb2
-import greeter2.greeter.worker as worker_grpc
+import greeter.greeter.common as common_pb2
+import greeter.greeter.worker as worker_grpc
 from grpclib_transports import Server
 
 
