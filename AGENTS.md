@@ -57,6 +57,11 @@ should never take that long, and the shorter timeout catches hangs quickly.
 - Do not hide unexpected failures with `except Exception: pass`. Log unexpected
   exceptions. Use `contextlib.suppress(...)` only for expected ignored
   exceptions, with a comment explaining why they are safe to ignore.
+- Every `# pyright: ignore[…]` comment must include a brief justification
+  after `--`, for example:
+  ``# pyright: ignore[reportPrivateUsage] -- grpclib internal API``.
+  Ignores without justifications are not allowed. Prefer fixing the root cause
+  (e.g. making an intentionally-public API non-private) over adding an ignore.
 
 # Useful commands
 - direnv exec . $command # run within a Nix environment with Python + dependencies configured
