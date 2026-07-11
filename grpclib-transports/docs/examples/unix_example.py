@@ -22,20 +22,22 @@ async def main() -> None:
     fd, sock = tempfile.mkstemp(suffix=".sock")
     os.close(fd)
     await Path(sock).unlink()
-    server = Server([Greeter()])
-    await server.start_unix(sock)
     channel = None
     try:
-        channel = connect_unix(sock)
-        stub = greeter_grpc.GreeterStub(channel)
-        response = await stub.SayHello(greeter_pb2.HelloRequest(name="World"))
-        assert response.message == "Hello, World!"
-        print(f"Greeter replied: {response.message}")
+        async with Server() as server:
+            await server.endpoint([Greeter()]).listen_unix(sock)
+            channel = connect_unix(sock)
+            try:
+                stub = greeter_grpc.GreeterStub(channel)
+                response = await stub.SayHello(greeter_pb2.HelloRequest(name="World"))
+                assert response.message == "Hello, World!"
+                print(f"Greeter replied: {response.message}")
+            finally:
+                channel.close()
+                channel = None
     finally:
         if channel is not None:
             channel.close()
-        server.close()
-        await server.wait_closed()
         with contextlib.suppress(OSError):
             await Path(sock).unlink()
 

@@ -3,23 +3,17 @@ from __future__ import annotations
 import argparse
 import asyncio
 
-from grpclib.server import Server
-
 from grpclib_transports.example.client import greet_ssh, greet_stdio, greet_unix
 from grpclib_transports.example.server import Greeter, serve
-from grpclib_transports.protocol import make_config
+from grpclib_transports.server import Server
 from grpclib_transports.ssh import serve_ssh
 from grpclib_transports.stdio import serve_stdio
 
 
 async def run_internal(path: str) -> None:
-    server = Server([Greeter()], config=make_config())
-    await server.start(path=path)
-    try:
+    async with Server() as server:
+        await server.endpoint([Greeter()]).listen_unix(path)
         await greet_unix(path)
-    finally:
-        server.close()
-        await server.wait_closed()
 
 
 def main() -> None:

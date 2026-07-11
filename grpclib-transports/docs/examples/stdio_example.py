@@ -15,18 +15,18 @@ from grpclib_transports import Server
 
 
 async def main() -> None:
-    server = Server([])
-    workers = server.for_workers([])
+    async with Server() as server:
+        workers = server.endpoint([]).for_workers()
 
-    async with workers.stdio_channels(
-        [sys.executable, "-m", "grpclib_transports", "server", "--stdio"],
-        client_factory=greeter_grpc.GreeterStub,
-        stderr=asyncio.subprocess.PIPE,
-    ) as pool:
-        stub = pool[0].client
-        response = await stub.SayHello(greeter_pb2.HelloRequest(name="Stdio"))
-        assert response.message == "Hello, Stdio!"
-        print(f"Greeter replied: {response.message}")
+        async with workers.stdio_channels(
+            [sys.executable, "-m", "grpclib_transports", "server", "--stdio"],
+            client_factory=greeter_grpc.GreeterStub,
+            stderr=asyncio.subprocess.PIPE,
+        ) as pool:
+            stub = pool[0].client
+            response = await stub.SayHello(greeter_pb2.HelloRequest(name="Stdio"))
+            assert response.message == "Hello, Stdio!"
+            print(f"Greeter replied: {response.message}")
 
 
 if __name__ == "__main__":

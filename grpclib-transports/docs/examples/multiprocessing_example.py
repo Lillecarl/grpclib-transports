@@ -19,18 +19,18 @@ def worker_services() -> list[Greeter]:
 
 
 async def main() -> None:
-    server = Server([])
-    workers = server.for_workers([])
+    async with Server() as server:
+        workers = server.endpoint([]).for_workers()
 
-    async with workers.multiprocessing_channels(
-        worker_services,
-        client_factory=greeter_grpc.GreeterStub,
-        preload=["greeter"],
-    ) as pool:
-        stub = pool[0].client
-        response = await stub.SayHello(greeter_pb2.HelloRequest(name="Multiprocessing"))
-        assert response.message == "Hello, Multiprocessing!"
-        print(f"Greeter replied: {response.message}")
+        async with workers.multiprocessing_channels(
+            worker_services,
+            client_factory=greeter_grpc.GreeterStub,
+            preload=["greeter"],
+        ) as pool:
+            stub = pool[0].client
+            response = await stub.SayHello(greeter_pb2.HelloRequest(name="Multiprocessing"))
+            assert response.message == "Hello, Multiprocessing!"
+            print(f"Greeter replied: {response.message}")
 
 
 if __name__ == "__main__":

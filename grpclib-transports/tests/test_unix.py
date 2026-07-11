@@ -15,17 +15,15 @@ async def test_unix_socket() -> None:
     Path(sock_path).unlink()
 
     try:
-        server = Server([Greeter()])
-        await server.start_unix(sock_path)
-        try:
+        async with Server() as server:
+            await server.endpoint([Greeter()]).listen_unix(sock_path)
             channel = connect_unix(sock_path)
-            stub = greeter_grpc.GreeterStub(channel)
-            response = await stub.SayHello(greeter_pb2.HelloRequest(name="Test"))
-            assert response.message == "Hello, Test!"
-            channel.close()
-        finally:
-            server.close()
-            await server.wait_closed()
+            try:
+                stub = greeter_grpc.GreeterStub(channel)
+                response = await stub.SayHello(greeter_pb2.HelloRequest(name="Test"))
+                assert response.message == "Hello, Test!"
+            finally:
+                channel.close()
     finally:
         with contextlib.suppress(OSError):
             Path(sock_path).unlink()

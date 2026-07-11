@@ -33,14 +33,10 @@ class Greeter(greeter_grpc.GreeterBase):
 
 async def serve(path: str) -> None:
     loop = asyncio.get_running_loop()
-    server = Server([Greeter()])
-    await server.start_unix(path)
-
     stop = loop.create_future()
     for sig in (signal.SIGINT, signal.SIGTERM):
         loop.add_signal_handler(sig, lambda: signal_stop(stop))
-    try:
+
+    async with Server() as server:
+        await server.endpoint([Greeter()]).listen_unix(path)
         await stop
-    finally:
-        server.close()
-        await server.wait_closed()

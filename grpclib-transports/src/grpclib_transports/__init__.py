@@ -102,6 +102,7 @@ from grpclib_transports.protocol import (
 from grpclib_transports.protocol import (
     signal_stop as signal_stop,
 )
+from grpclib_transports.server import Endpoint as Endpoint
 from grpclib_transports.server import Server as Server
 from grpclib_transports.ssh import (
     SshChannel as SshChannel,
@@ -161,6 +162,7 @@ from grpclib_transports.workers import (
 __all__ = [
     "DEFAULT_TUNING",
     "BaseCustomTransport",
+    "Endpoint",
     "LogicalFrame",
     "LogicalRpcPeer",
     "MultiprocessingPipeEndpoint",

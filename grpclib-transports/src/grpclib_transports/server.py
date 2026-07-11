@@ -1,59 +1,49 @@
-"""High-level gRPC server wrapper with transport-aware peer pool support."""
+"""Application-style server container with per-endpoint service sets."""
 
 from __future__ import annotations
 
 import socket
-from typing import TYPE_CHECKING, Any, TypeVar
+from typing import TYPE_CHECKING, Any
 
 from grpclib.server import Server as GrpclibServer
 
-from grpclib_transports.bidi import LogicalRpcPeer
 from grpclib_transports.protocol import DEFAULT_TUNING, TransportTuning, make_config
-from grpclib_transports.workers import PeerFactory, StdioPeerPool, WorkerHost
+from grpclib_transports.workers import WorkerHost
 
 if TYPE_CHECKING:
-    from collections.abc import Collection, Mapping, Sequence
+    from collections.abc import Collection
     from pathlib import Path
     from ssl import SSLContext
 
     from grpclib._typing import IServable
     from grpclib.encoding.base import CodecBase, StatusDetailsCodecBase
 
-PeerT = TypeVar("PeerT", bound=LogicalRpcPeer)
 
-
-class Server:
-    """High-level gRPC server with transport-aware peer management.
-
-    Wraps grpclib's :class:`~grpclib.server.Server` with tuned configuration
-    and a :meth:`stdio_peer_pool` factory for spawning workers over stdio pipes.
-
-    Supports Unix-domain and TCP listening via :meth:`start_unix` and
-    :meth:`start_tcp`.  Can be used as an async context manager.
-    """
+class Endpoint:
+    """A virtual endpoint: services plus transport-specific bindings."""
 
     def __init__(
         self,
+        app: Server,
         handlers: Collection[IServable],
         *,
-        tuning: TransportTuning = DEFAULT_TUNING,
         codec: CodecBase | None = None,
         status_details_codec: StatusDetailsCodecBase | None = None,
     ) -> None:
-        self.tuning = tuning
-        self._server = GrpclibServer(
-            handlers,
-            codec=codec,
-            status_details_codec=status_details_codec,
-            config=make_config(tuning),
+        self.app = app
+        self.handlers = tuple(handlers)
+        self.codec = codec
+        self.status_details_codec = status_details_codec
+
+    def _make_server(self) -> GrpclibServer:
+        return GrpclibServer(
+            self.handlers,
+            codec=self.codec,
+            status_details_codec=self.status_details_codec,
+            config=make_config(self.app.tuning),
         )
 
-    @property
-    def raw_server(self) -> GrpclibServer:
-        """The underlying :class:`grpclib.server.Server` instance."""
-        return self._server
-
-    async def start(
+    async def listen(
         self,
         host: str | None = None,
         port: int | None = None,
@@ -66,8 +56,9 @@ class Server:
         ssl: SSLContext | None = None,
         reuse_address: bool | None = None,
         reuse_port: bool | None = None,
-    ) -> None:
-        await self._server.start(
+    ) -> GrpclibServer:
+        server = self._make_server()
+        await server.start(
             host=host,
             port=port,
             path=str(path) if path is not None else None,
@@ -79,17 +70,18 @@ class Server:
             reuse_address=reuse_address,
             reuse_port=reuse_port,
         )
+        self.app.track_server(server)
+        return server
 
-    async def start_unix(
+    async def listen_unix(
         self,
         path: str | Path,
         *,
         backlog: int = 100,
-    ) -> None:
-        """Start listening on a Unix-domain socket at *path*."""
-        await self.start(path=path, backlog=backlog)
+    ) -> GrpclibServer:
+        return await self.listen(path=path, backlog=backlog)
 
-    async def start_tcp(
+    async def listen_tcp(
         self,
         host: str,
         port: int,
@@ -100,9 +92,8 @@ class Server:
         ssl: SSLContext | None = None,
         reuse_address: bool | None = None,
         reuse_port: bool | None = None,
-    ) -> None:
-        """Start listening on a TCP socket at *host*:*port*."""
-        await self.start(
+    ) -> GrpclibServer:
+        return await self.listen(
             host=host,
             port=port,
             family=family,
@@ -113,43 +104,46 @@ class Server:
             reuse_port=reuse_port,
         )
 
-    def stdio_peer_pool(
+    def for_workers(self) -> WorkerHost:
+        return WorkerHost(self.handlers, tuning=self.app.tuning)
+
+
+class Server:
+    """Container for multiple service endpoints and worker managers."""
+
+    def __init__(
         self,
-        argv: Sequence[str | Path],
         *,
-        peer_factory: PeerFactory[PeerT],
-        size: int = 1,
-        cwd: str | Path | None = None,
-        env: Mapping[str, str] | None = None,
-        stderr: Any = None,
-    ) -> StdioPeerPool[PeerT]:
-        """Create a :class:`~grpclib_transports.workers.StdioPeerPool` that spawns *size* worker subprocesses."""
-        return StdioPeerPool(
-            argv,
-            peer_factory=peer_factory,
-            size=size,
-            tuning=self.tuning,
-            cwd=cwd,
-            env=env,
-            stderr=stderr,
+        tuning: TransportTuning = DEFAULT_TUNING,
+    ) -> None:
+        self.tuning = tuning
+        self._servers: list[GrpclibServer] = []
+
+    def endpoint(
+        self,
+        handlers: Collection[IServable],
+        *,
+        codec: CodecBase | None = None,
+        status_details_codec: StatusDetailsCodecBase | None = None,
+    ) -> Endpoint:
+        return Endpoint(
+            self,
+            handlers,
+            codec=codec,
+            status_details_codec=status_details_codec,
         )
 
-    def for_workers(
-        self,
-        parent_services: Collection[IServable],
-    ) -> WorkerHost:
-        """Create a server-owned host for managed worker sessions.
-
-        ``parent_services`` are scoped to worker sessions, not exposed on the
-        public Unix/TCP listeners started by this server.
-        """
-        return WorkerHost(parent_services, tuning=self.tuning)
+    def track_server(self, server: GrpclibServer) -> None:
+        self._servers.append(server)
 
     def close(self) -> None:
-        self._server.close()
+        for server in self._servers:
+            server.close()
 
     async def wait_closed(self) -> None:
-        await self._server.wait_closed()
+        for server in self._servers:
+            await server.wait_closed()
+        self._servers.clear()
 
     async def __aenter__(self) -> Server:
         return self
