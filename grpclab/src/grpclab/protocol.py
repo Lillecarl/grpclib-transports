@@ -1,9 +1,13 @@
 from __future__ import annotations
 
 import asyncio
+import grp
 import inspect
 import os
+import pwd
 import re
+import socket
+import struct
 from collections.abc import Iterator, Sequence
 from dataclasses import dataclass
 from typing import Any
@@ -169,6 +173,105 @@ class TransportTuning:
 
 
 DEFAULT_TUNING = TransportTuning.from_env()
+
+
+@dataclass(frozen=True)
+class PeerIdentity:
+    transport: str
+    username: str | None
+    uid: int | None = None
+    gid: int | None = None
+    pid: int | None = None
+    group_ids: tuple[int, ...] | None = None
+    group_names: tuple[str, ...] | None = None
+
+
+def _username_for_uid(uid: int) -> str | None:
+    try:
+        return pwd.getpwuid(uid).pw_name
+    except KeyError:
+        return None
+
+
+def _group_names(group_ids: Sequence[int]) -> tuple[str, ...]:
+    names: list[str] = []
+    for group_id in group_ids:
+        try:
+            names.append(grp.getgrgid(group_id).gr_name)
+        except KeyError:
+            names.append(str(group_id))
+    return tuple(names)
+
+
+def _groups_for_user(username: str, gid: int) -> tuple[int, ...] | None:
+    try:
+        return tuple(os.getgrouplist(username, gid))
+    except OSError:
+        return None
+
+
+def local_process_identity(*, transport: str) -> PeerIdentity:
+    uid = os.geteuid()
+    gid = os.getegid()
+    username = _username_for_uid(uid)
+    group_ids = tuple(os.getgroups())
+    return PeerIdentity(
+        transport=transport,
+        username=username,
+        uid=uid,
+        gid=gid,
+        pid=os.getpid(),
+        group_ids=group_ids,
+        group_names=_group_names(group_ids),
+    )
+
+
+def _unix_socket_identity(sock: socket.socket) -> PeerIdentity | None:
+    if not hasattr(socket, "SO_PEERCRED"):
+        return None
+    try:
+        raw = sock.getsockopt(
+            socket.SOL_SOCKET,
+            socket.SO_PEERCRED,
+            struct.calcsize("3i"),
+        )
+    except OSError:
+        return None
+    pid, uid, gid = struct.unpack("3i", raw)
+    username = _username_for_uid(uid)
+    group_ids = _groups_for_user(username, gid) if username is not None else None
+    return PeerIdentity(
+        transport="unix",
+        username=username,
+        uid=uid,
+        gid=gid,
+        pid=pid,
+        group_ids=group_ids,
+        group_names=_group_names(group_ids) if group_ids is not None else None,
+    )
+
+
+def peer_identity_from_transport(transport: Any) -> PeerIdentity:
+    identity = transport.get_extra_info("peer_identity")
+    if isinstance(identity, PeerIdentity):
+        return identity
+
+    ssh_username = transport.get_extra_info("username")
+    if isinstance(ssh_username, str):
+        return PeerIdentity(transport="ssh", username=ssh_username)
+
+    sock = transport.get_extra_info("socket")
+    if isinstance(sock, socket.socket) and sock.family == socket.AF_UNIX:
+        identity = _unix_socket_identity(sock)
+        if identity is not None:
+            return identity
+
+    return PeerIdentity(transport="unknown", username=None)
+
+
+def peer_identity_from_stream(stream: Any) -> PeerIdentity:
+    transport = stream.peer._transport
+    return peer_identity_from_transport(transport)
 
 
 class BaseCustomTransport(asyncio.Transport):

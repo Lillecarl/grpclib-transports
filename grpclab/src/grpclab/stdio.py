@@ -13,6 +13,7 @@ from grpclab.protocol import (
     BaseCustomTransport,
     TransportTuning,
     init_h2_transport,
+    local_process_identity,
     make_config,
     pause_h2_protocol,
     pump,
@@ -52,6 +53,8 @@ class StdioTransport(BaseCustomTransport):
         self._writer.close()
 
     def get_extra_info(self, name: str, default: Any = None) -> Any:
+        if name == "peer_identity":
+            return local_process_identity(transport="stdio")
         return self._writer.get_extra_info(name, default)
 
     def abort(self) -> None:
