@@ -10,6 +10,12 @@ from grpclib_transports.client import (
     connect_tcp as connect_tcp,
     connect_unix as connect_unix,
 )
+from grpclib_transports.pipes import (
+    PipeChannel as PipeChannel,
+    PipeTransport as PipeTransport,
+    pipe_streams as pipe_streams,
+    pipe_streams_from_fds as pipe_streams_from_fds,
+)
 from grpclib_transports.protocol import (
     DEFAULT_TUNING as DEFAULT_TUNING,
     BaseCustomTransport as BaseCustomTransport,
@@ -62,6 +68,8 @@ __all__ = [
     "PeerClosedError",
     "PeerIdentity",
     "PeerRegistry",
+    "PipeChannel",
+    "PipeTransport",
     "RegisteredPeer",
     "RemoteCallError",
     "TransportTuning",
@@ -87,6 +95,8 @@ __all__ = [
     "pause_h2_protocol",
     "peer_identity_from_stream",
     "peer_identity_from_transport",
+    "pipe_streams",
+    "pipe_streams_from_fds",
     "pump",
     "resume_h2_protocol",
     "serve_h2",
