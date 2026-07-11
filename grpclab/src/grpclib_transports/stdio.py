@@ -2,7 +2,10 @@ from __future__ import annotations
 
 import asyncio
 import contextlib
+import fcntl
 import sys
+from collections.abc import AsyncIterator, Mapping, Sequence
+from pathlib import Path
 from typing import Any
 
 from grpclib import client
@@ -20,6 +23,8 @@ from grpclib_transports.protocol import (
     resume_h2_protocol,
     serve_h2,
 )
+
+_SUBPROCESS_CLOSE_TIMEOUT = 5.0
 
 
 class StdioTransport(BaseCustomTransport):
@@ -111,6 +116,68 @@ async def serve_stdio(
 
     with contextlib.redirect_stdout(sys.stderr):
         await serve_h2(handlers, reader, transport, tuning=tuning)
+
+
+def _bump_subprocess_pipe_buffers(
+    proc: asyncio.subprocess.Process,
+    *,
+    tuning: TransportTuning = DEFAULT_TUNING,
+) -> None:
+    popen = getattr(getattr(proc, "_transport", None), "_proc", None)
+    if popen is None:
+        return
+    for attr in ("stdin", "stdout", "stderr"):
+        f = getattr(popen, attr, None)
+        if f is not None:
+            with contextlib.suppress(OSError):
+                fcntl.fcntl(f.fileno(), fcntl.F_SETPIPE_SZ, tuning.buffer_size)
+
+
+async def _close_worker_process(proc: asyncio.subprocess.Process) -> None:
+    if proc.returncode is not None:
+        return
+
+    proc.terminate()
+    with contextlib.suppress(asyncio.TimeoutError):
+        await asyncio.wait_for(proc.wait(), _SUBPROCESS_CLOSE_TIMEOUT)
+        return
+
+    if proc.returncode is None:
+        proc.kill()
+        await proc.wait()
+
+
+@contextlib.asynccontextmanager
+async def stdio_worker(
+    argv: Sequence[str | Path],
+    *,
+    tuning: TransportTuning = DEFAULT_TUNING,
+    cwd: str | Path | None = None,
+    env: Mapping[str, str] | None = None,
+    stderr: Any = None,
+) -> AsyncIterator[StdioChannel]:
+    if not argv:
+        raise ValueError("argv must not be empty")
+
+    proc = await asyncio.create_subprocess_exec(
+        *(str(arg) for arg in argv),
+        stdin=asyncio.subprocess.PIPE,
+        stdout=asyncio.subprocess.PIPE,
+        stderr=stderr,
+        cwd=str(cwd) if cwd is not None else None,
+        env=env,
+    )
+    if proc.stdin is None or proc.stdout is None:
+        await _close_worker_process(proc)
+        raise RuntimeError("stdio worker was not started with stdin/stdout pipes")
+
+    _bump_subprocess_pipe_buffers(proc, tuning=tuning)
+    channel = StdioChannel(proc.stdout, proc.stdin, tuning=tuning)
+    try:
+        yield channel
+    finally:
+        await channel.aclose()
+        await _close_worker_process(proc)
 
 
 class StdioChannel(client.Channel):

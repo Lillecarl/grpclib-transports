@@ -36,6 +36,7 @@ from grpclib_transports.stdio import (
     StdioChannel as StdioChannel,
     StdioTransport as StdioTransport,
     serve_stdio as serve_stdio,
+    stdio_worker as stdio_worker,
 )
 
 __all__ = [
@@ -68,4 +69,5 @@ __all__ = [
     "serve_ssh",
     "serve_stdio",
     "signal_stop",
+    "stdio_worker",
 ]
