@@ -82,6 +82,9 @@ async def pipe_streams(
     transport_ref: list[PipeTransport] = []
 
     class _Bridge(asyncio.Protocol):
+        def __init__(self) -> None:
+            self._closed = loop.create_future()
+
         def pause_writing(self) -> None:
             if transport_ref:
                 pause_h2_protocol(transport_ref[0]._protocol)
@@ -89,6 +92,17 @@ async def pipe_streams(
         def resume_writing(self) -> None:
             if transport_ref:
                 resume_h2_protocol(transport_ref[0]._protocol)
+
+        def connection_lost(self, exc: Exception | None) -> None:
+            if self._closed.done():
+                return
+            if exc is None:
+                self._closed.set_result(None)
+            else:
+                self._closed.set_exception(exc)
+
+        def _get_close_waiter(self, _stream: Any) -> asyncio.Future[None]:
+            return self._closed
 
     t, proto = await loop.connect_write_pipe(
         lambda: _Bridge(),
