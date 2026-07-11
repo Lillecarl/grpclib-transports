@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import asyncio
 import contextlib
+import multiprocessing as mp
 import os
 
 from demo import demo_grpc, demo_pb2
@@ -67,8 +68,10 @@ def test_raw_pipe_transport():
 
 
 def test_multiprocessing_pipe_pair_uses_forkserver_context():
-    pair = multiprocessing_pipe_pair()
+    assert mp.get_start_method(allow_none=True) is None
+    pair = multiprocessing_pipe_pair(preload=["demo"])
     assert pair.context.get_start_method() == "forkserver"
+    assert mp.get_start_method(allow_none=True) is None
     try:
         asyncio.run(
             _assert_pipe_round_trip(

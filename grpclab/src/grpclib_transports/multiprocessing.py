@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import multiprocessing as mp
 import os
+from collections.abc import Sequence
 from dataclasses import dataclass
 from typing import Any
 
@@ -9,8 +10,14 @@ from grpclib_transports.pipes import PipeChannel, pipe_streams_from_fds
 from grpclib_transports.protocol import DEFAULT_TUNING, TransportTuning
 
 
-def get_forkserver_context() -> Any:
-    return mp.get_context("forkserver")
+def get_forkserver_context(
+    *,
+    preload: Sequence[str] = (),
+) -> Any:
+    context = mp.get_context("forkserver")
+    if preload:
+        context.set_forkserver_preload(list(preload))
+    return context
 
 
 @dataclass(frozen=True)
@@ -60,8 +67,11 @@ class MultiprocessingPipePair:
 def multiprocessing_pipe_pair(
     *,
     context: Any | None = None,
+    preload: Sequence[str] = (),
 ) -> MultiprocessingPipePair:
-    ctx = context or get_forkserver_context()
+    ctx = context or get_forkserver_context(preload=preload)
+    if context is not None and preload:
+        ctx.set_forkserver_preload(list(preload))
     parent_read, child_write = ctx.Pipe(duplex=False)
     child_read, parent_write = ctx.Pipe(duplex=False)
     return MultiprocessingPipePair(
