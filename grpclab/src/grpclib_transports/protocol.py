@@ -8,7 +8,7 @@ import pwd
 import re
 import socket
 import struct
-from collections.abc import Iterator, Sequence
+from collections.abc import Sequence
 from dataclasses import dataclass
 from typing import Any
 
@@ -320,14 +320,6 @@ def pause_h2_protocol(protocol: asyncio.BaseProtocol | None) -> None:
 def resume_h2_protocol(protocol: asyncio.BaseProtocol | None) -> None:
     if protocol is not None:
         protocol.resume_writing()
-
-
-def iter_chunks(data: bytes | bytearray | memoryview, chunk_size: int) -> Iterator[bytes]:
-    if chunk_size <= 0:
-        raise ValueError("chunk_size must be positive")
-    view = memoryview(data)
-    for offset in range(0, len(view), chunk_size):
-        yield view[offset : offset + chunk_size].tobytes()
 
 
 async def pump(

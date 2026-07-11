@@ -12,7 +12,6 @@ from grpclib_transports.protocol import (
     build_mapping as build_mapping,
     init_h2_transport as init_h2_transport,
     install_h2_fast_receive_patch as install_h2_fast_receive_patch,
-    iter_chunks as iter_chunks,
     local_process_identity as local_process_identity,
     make_config as make_config,
     make_h2_config as make_h2_config,
@@ -39,6 +38,10 @@ from grpclib_transports.stdio import (
     serve_stdio as serve_stdio,
     stdio_worker as stdio_worker,
 )
+from grpclib_transports.transfer import (
+    iter_chunks as iter_chunks,
+    iter_file_chunks as iter_file_chunks,
+)
 
 __all__ = [
     "DEFAULT_TUNING",
@@ -58,6 +61,7 @@ __all__ = [
     "install_h2_fast_receive_patch",
     "is_ssh_available",
     "iter_chunks",
+    "iter_file_chunks",
     "local_process_identity",
     "make_config",
     "make_h2_config",

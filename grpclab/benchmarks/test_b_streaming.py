@@ -12,8 +12,9 @@ import anyio
 import pytest
 from conftest import BENCH_SAMPLES, _bump_pipe_buf, _report, _run
 from demo import demo_grpc, demo_pb2
-from grpclib_transports.protocol import DEFAULT_TUNING, iter_chunks, make_config
+from grpclib_transports.protocol import DEFAULT_TUNING, make_config
 from grpclib_transports.stdio import StdioChannel
+from grpclib_transports.transfer import iter_chunks
 from grpclib.client import Channel
 
 TOTAL_SIZE = 8 * 1024 * 1024
