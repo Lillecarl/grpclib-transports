@@ -16,6 +16,11 @@ dependencies = [
 ]
 
 [project.optional-dependencies]
+docs = [
+    "furo",
+    "myst-parser",
+    "sphinx",
+]
 ssh = [
     "asyncssh",
 ]
