@@ -30,6 +30,12 @@ from grpclib_transports.multiprocessing import (
 from grpclib_transports.multiprocessing import (
     multiprocessing_pipe_pair as multiprocessing_pipe_pair,
 )
+from grpclib_transports.multiprocessing import (
+    multiprocessing_worker as multiprocessing_worker,
+)
+from grpclib_transports.multiprocessing import (
+    serve_multiprocessing_endpoint as serve_multiprocessing_endpoint,
+)
 from grpclib_transports.pipes import (
     PipeChannel as PipeChannel,
 )
@@ -180,6 +186,7 @@ __all__ = [
     "make_h2_config",
     "make_server_protocol",
     "multiprocessing_pipe_pair",
+    "multiprocessing_worker",
     "pause_h2_protocol",
     "peer_identity_from_stream",
     "peer_identity_from_transport",
@@ -188,6 +195,7 @@ __all__ = [
     "pump",
     "resume_h2_protocol",
     "serve_h2",
+    "serve_multiprocessing_endpoint",
     "serve_ssh",
     "serve_stdio",
     "signal_stop",
