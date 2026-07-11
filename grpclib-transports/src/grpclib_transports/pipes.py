@@ -34,6 +34,7 @@ class PipeTransport(BaseCustomTransport):
     it accepts arbitrary binary file objects rather than being hardwired to
     ``sys.stdin``/``sys.stdout``.
     """
+
     def __init__(
         self,
         reader: asyncio.StreamReader,
@@ -152,6 +153,7 @@ async def pipe_streams_from_fds(
 
 class PipeChannel(client.Channel):
     """A gRPC channel that speaks H2 over a raw OS pipe pair."""
+
     def __init__(
         self,
         reader: Any,

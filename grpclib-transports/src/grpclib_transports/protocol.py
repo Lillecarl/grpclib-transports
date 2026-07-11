@@ -122,10 +122,7 @@ def install_h2_fast_receive_patch() -> None:
 
     params = tuple(inspect.signature(H2Connection._receive_frame).parameters)
     if params != ("self", "frame"):
-        raise RuntimeError(
-            "Unsupported h2 H2Connection._receive_frame signature: "
-            f"{params!r}"
-        )
+        raise RuntimeError(f"Unsupported h2 H2Connection._receive_frame signature: {params!r}")
     H2Connection._receive_frame = _receive_frame_without_trace_repr
     _H2_FAST_RECEIVE_PATCH_INSTALLED = True
 
@@ -183,9 +180,7 @@ class TransportTuning:
             min(DEFAULT_HTTP2_MAX_FRAME_SIZE, buffer_size, MAX_FRAME_SIZE),
         )
         if max_frame_size > MAX_FRAME_SIZE:
-            raise ValueError(
-                "GRPCLAB_HTTP2_MAX_FRAME_SIZE exceeds HTTP/2 maximum frame size"
-            )
+            raise ValueError("GRPCLAB_HTTP2_MAX_FRAME_SIZE exceeds HTTP/2 maximum frame size")
         return cls(
             buffer_size=buffer_size,
             read_chunk_size=buffer_size,
@@ -458,9 +453,11 @@ def init_h2_transport(
     """Wire an H2 protocol to a transport and advertise a tuned max frame size."""
     transport.set_protocol(protocol)
     protocol.connection_made(transport)
-    protocol.connection._connection.update_settings({
-        SettingCodes.MAX_FRAME_SIZE: tuning.http2_max_frame_size,
-    })
+    protocol.connection._connection.update_settings(
+        {
+            SettingCodes.MAX_FRAME_SIZE: tuning.http2_max_frame_size,
+        }
+    )
     protocol.connection.flush()
 
 

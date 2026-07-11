@@ -6,8 +6,6 @@ build-backend = "hatchling.build"
 name = "demo"
 version = "0.1.0"
 description = "Demo gRPC protobuf definitions"
-authors = [
-    { name="Carl Andersson", email="github@lillecarl.com" }
-]
+authors = [{ name = "Carl Andersson", email = "github@lillecarl.com" }]
 requires-python = ">=3.12"
 dependencies = []

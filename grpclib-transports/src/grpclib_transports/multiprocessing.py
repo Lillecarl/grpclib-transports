@@ -63,6 +63,7 @@ class MultiprocessingPipeEndpoint:
 @dataclass(frozen=True)
 class MultiprocessingPipePair:
     """A pair of :class:`MultiprocessingPipeEndpoint` — one for parent, one for child."""
+
     parent: MultiprocessingPipeEndpoint
     child: MultiprocessingPipeEndpoint
     context: Any

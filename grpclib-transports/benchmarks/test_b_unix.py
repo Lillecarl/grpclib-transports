@@ -28,6 +28,7 @@ def test_unix(parallelism):
             await server.wait_closed()
             with contextlib.suppress(OSError):
                 await anyio.Path(sock).unlink()
+
     _run(f"unix (p={parallelism})", run())
 
 
@@ -54,8 +55,12 @@ def test_unix_subprocess(parallelism):
                     break
                 await asyncio.sleep(0.01)
             channel = Channel(path=sock, config=make_config())
-            await _bench(f"unixproc (small, p={parallelism})", SMALL_PAYLOAD, SMALL_COUNT, channel, parallelism=parallelism)
-            await _bench(f"unixproc (large, p={parallelism})", LARGE_PAYLOAD, LARGE_COUNT, channel, parallelism=parallelism)
+            await _bench(
+                f"unixproc (small, p={parallelism})", SMALL_PAYLOAD, SMALL_COUNT, channel, parallelism=parallelism
+            )
+            await _bench(
+                f"unixproc (large, p={parallelism})", LARGE_PAYLOAD, LARGE_COUNT, channel, parallelism=parallelism
+            )
         finally:
             if channel is not None:
                 channel.close()
@@ -65,4 +70,5 @@ def test_unix_subprocess(parallelism):
             await proc.wait()
             with contextlib.suppress(OSError):
                 await anyio.Path(sock).unlink()
+
     _run(f"unixproc (p={parallelism})", run())

@@ -18,6 +18,7 @@ from grpclib_transports.workers import PeerFactory, StdioPeerPool
 
 PeerT = TypeVar("PeerT", bound=LogicalRpcPeer)
 
+
 class Server:
     """High-level gRPC server with transport-aware peer management.
 

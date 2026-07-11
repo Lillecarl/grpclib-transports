@@ -14,8 +14,11 @@ from grpclib_transports.ssh import SshChannel, SshTransport
 @pytest.mark.parametrize("parallelism", [1, 2, 4, 8])
 def test_ssh(parallelism):
     class _Server(asyncssh.SSHServer):
-        def password_auth_supported(self): return True
-        def validate_password(self, username, password): return True
+        def password_auth_supported(self):
+            return True
+
+        def validate_password(self, username, password):
+            return True
 
     async def run():
         sock = tempfile.mktemp(suffix=".sock")
@@ -31,11 +34,18 @@ def test_ssh(parallelism):
             await serve_h2([Greeter()], stdin, t)
 
         acceptor = await asyncssh.listen(
-            sock=ssock, server_host_keys=[key], server_factory=_Server,
-            session_factory=session_handler, encoding=None, line_editor=False,
+            sock=ssock,
+            server_host_keys=[key],
+            server_factory=_Server,
+            session_factory=session_handler,
+            encoding=None,
+            line_editor=False,
             encryption_algs=[
-                "aes256-gcm@openssh.com", "aes128-gcm@openssh.com",
-                "aes256-ctr", "aes192-ctr", "aes128-ctr",
+                "aes256-gcm@openssh.com",
+                "aes128-gcm@openssh.com",
+                "aes256-ctr",
+                "aes192-ctr",
+                "aes128-ctr",
                 "chacha20-poly1305@openssh.com",
             ],
         )
@@ -43,18 +53,28 @@ def test_ssh(parallelism):
             csock = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
             csock.connect(sock)
             conn = await asyncssh.connect(
-                sock=csock, known_hosts=None, username="x", password="x",
+                sock=csock,
+                known_hosts=None,
+                username="x",
+                password="x",
                 encryption_algs=[
-                    "aes256-gcm@openssh.com", "aes128-gcm@openssh.com",
-                    "aes256-ctr", "aes192-ctr", "aes128-ctr",
+                    "aes256-gcm@openssh.com",
+                    "aes128-gcm@openssh.com",
+                    "aes256-ctr",
+                    "aes192-ctr",
+                    "aes128-ctr",
                     "chacha20-poly1305@openssh.com",
                 ],
             )
             try:
                 stdin, stdout, _ = await conn.open_session(encoding=None)
                 channel = SshChannel(stdout, stdin)
-                await _bench(f"ssh (small, p={parallelism})", SMALL_PAYLOAD, SMALL_COUNT, channel, parallelism=parallelism)
-                await _bench(f"ssh (large, p={parallelism})", LARGE_PAYLOAD, LARGE_COUNT, channel, parallelism=parallelism)
+                await _bench(
+                    f"ssh (small, p={parallelism})", SMALL_PAYLOAD, SMALL_COUNT, channel, parallelism=parallelism
+                )
+                await _bench(
+                    f"ssh (large, p={parallelism})", LARGE_PAYLOAD, LARGE_COUNT, channel, parallelism=parallelism
+                )
                 await channel.aclose()
             finally:
                 conn.close()
@@ -63,4 +83,5 @@ def test_ssh(parallelism):
             await acceptor.wait_closed()
             with contextlib.suppress(OSError):
                 await anyio.Path(sock).unlink()
+
     _run(f"ssh (p={parallelism})", run())

@@ -6,12 +6,13 @@ workflow or run Git porcelain commands such as `git status`, `git diff`,
 `git commit`, `git checkout`, or `git reset` unless the user explicitly asks for
 Git or a tool requires Git-specific plumbing.
 
+# Testing
 Run pytest commands so the complete output is preserved. Do not pipe pytest
 directly into `tail`, `head`, `grep`, or similar filters. If you need a short
 live summary, use `tee` first and enable `pipefail` so pytest failures are not
 masked by `tail`, for example:
 
-- `bash -o pipefail -c 'timeout 180 direnv exec . pytest tests 2>&1 | tee /tmp/pytest.log | tail -n 80'`
+- `timeout 30 direnv exec . pytest tests 2>&1 | tee /tmp/pytest.log | tail -n 80`
 
 The saved log is the source of truth. Use the short live summary only to decide
 what to inspect next, then query `/tmp/pytest.log` for the full failure context.

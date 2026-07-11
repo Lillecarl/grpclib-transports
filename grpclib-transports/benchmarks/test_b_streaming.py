@@ -55,7 +55,11 @@ async def _bench_upload(label, channel) -> None:
 def test_streaming_upload_8mib(transport):
     async def run_stdio():
         proc = await asyncio.create_subprocess_exec(
-            sys.executable, "-m", "grpclib_transports", "server", "--stdio",
+            sys.executable,
+            "-m",
+            "grpclib_transports",
+            "server",
+            "--stdio",
             stdin=asyncio.subprocess.PIPE,
             stdout=asyncio.subprocess.PIPE,
             stderr=asyncio.subprocess.PIPE,

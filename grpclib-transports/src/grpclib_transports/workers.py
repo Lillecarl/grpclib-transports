@@ -40,6 +40,7 @@ class RegisteredPeer(Generic[PeerT]):
     async def event(self, method: str, payload: Any = None) -> None:
         await self.peer.event(method, payload)
 
+
 class PeerRegistry(Generic[PeerT]):
     """A thread-unsafe registry of :class:`RegisteredPeer` instances.
 
@@ -91,15 +92,13 @@ class PeerRegistry(Generic[PeerT]):
         *,
         timeout: float | None = None,
     ) -> list[Any]:
-        return [
-            await peer.call(method, payload, timeout=timeout)
-            for peer in self.snapshot()
-        ]
+        return [await peer.call(method, payload, timeout=timeout) for peer in self.snapshot()]
 
     async def aclose(self) -> None:
         for registered in self.snapshot():
             await registered.peer.aclose()
             self.unregister(registered.id)
+
 
 class StdioPeerPool(Generic[PeerT]):
     """A pool of *size* subprocess workers, each bridged by a :class:`LogicalRpcPeer`.

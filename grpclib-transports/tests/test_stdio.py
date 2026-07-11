@@ -12,9 +12,7 @@ def test_stdio_transport():
             stderr=asyncio.subprocess.PIPE,
         ) as channel:
             stub = demo_grpc.GreeterStub(channel)
-            response = await stub.SayHello(
-                demo_pb2.HelloRequest(name="Stdio")
-            )
+            response = await stub.SayHello(demo_pb2.HelloRequest(name="Stdio"))
             assert response.message == "Hello, Stdio!"
 
     asyncio.run(run())

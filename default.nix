@@ -1,5 +1,5 @@
-{
-  pkgs ? import <nixpkgs> { },
+{ pkgs ? import <nixpkgs> { }
+,
 }:
 let
   self = rec {
@@ -9,7 +9,7 @@ let
       inherit proto;
     };
     shell = pkgs.python3Packages.callPackage ./nix/shell.nix {
-      inherit proto grpclib-transports;
+      inherit grpclib-transports;
     };
   };
 in

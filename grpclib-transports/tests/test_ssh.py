@@ -14,6 +14,7 @@ from grpclib_transports.ssh import SshTransport, connect_ssh
 class _TestSSHServer(asyncssh.SSHServer):
     def password_auth_supported(self):
         return True
+
     def validate_password(self, username, password):
         return True
 
@@ -41,8 +42,11 @@ def test_ssh_transport():
             encoding=None,
             line_editor=False,
             encryption_algs=[
-                "aes256-gcm@openssh.com", "aes128-gcm@openssh.com",
-                "aes256-ctr", "aes192-ctr", "aes128-ctr",
+                "aes256-gcm@openssh.com",
+                "aes128-gcm@openssh.com",
+                "aes256-ctr",
+                "aes192-ctr",
+                "aes128-ctr",
                 "chacha20-poly1305@openssh.com",
             ],
         )
@@ -57,15 +61,16 @@ def test_ssh_transport():
                 password="test",
                 sock=client_sock,
                 encryption_algs=[
-                    "aes256-gcm@openssh.com", "aes128-gcm@openssh.com",
-                    "aes256-ctr", "aes192-ctr", "aes128-ctr",
+                    "aes256-gcm@openssh.com",
+                    "aes128-gcm@openssh.com",
+                    "aes256-ctr",
+                    "aes192-ctr",
+                    "aes128-ctr",
                     "chacha20-poly1305@openssh.com",
                 ],
             ) as channel:
                 stub = demo_grpc.GreeterStub(channel)
-                response = await stub.SayHello(
-                    demo_pb2.HelloRequest(name="SSH")
-                )
+                response = await stub.SayHello(demo_pb2.HelloRequest(name="SSH"))
                 assert response.message == "Hello, SSH!"
         finally:
             acceptor.close()

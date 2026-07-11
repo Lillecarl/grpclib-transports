@@ -146,9 +146,7 @@ class SshTransport(BaseCustomTransport):
     def write_eof(self) -> None:
         self._writer.write_eof()
 
-    def set_write_buffer_limits(
-        self, high: int | None = None, low: int | None = None
-    ) -> None:
+    def set_write_buffer_limits(self, high: int | None = None, low: int | None = None) -> None:
         self._chan.set_write_buffer_limits(high=high, low=low)
 
 
@@ -171,6 +169,7 @@ async def serve_ssh(
     class _DemoSSHServer(asyncssh.SSHServer):
         def password_auth_supported(self):
             return True
+
         def validate_password(self, username: str, password: str) -> bool:
             return True
 

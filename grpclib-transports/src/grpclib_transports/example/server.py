@@ -11,7 +11,6 @@ from grpclib_transports.server import Server
 
 
 class Greeter(demo_grpc.GreeterBase):
-
     @typing.override
     async def SayHello(self, stream):
         request = await stream.recv_message()

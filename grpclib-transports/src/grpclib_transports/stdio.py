@@ -97,6 +97,7 @@ async def _stdio_streams(
         def pause_writing(self) -> None:
             if transport_ref:
                 pause_h2_protocol(transport_ref[0]._protocol)
+
         def resume_writing(self) -> None:
             if transport_ref:
                 resume_h2_protocol(transport_ref[0]._protocol)
@@ -228,9 +229,7 @@ class StdioChannel(client.Channel):
 
     async def _create_connection(self) -> H2Protocol:
         protocol = self._protocol_factory()
-        transport = self._stdio_transport or StdioTransport(
-            self._stdio_reader, self._stdio_writer, tuning=self._tuning
-        )
+        transport = self._stdio_transport or StdioTransport(self._stdio_reader, self._stdio_writer, tuning=self._tuning)
         self._stdio_transport = transport
         init_h2_transport(protocol, transport, tuning=self._tuning)
         self._pump_task = asyncio.create_task(

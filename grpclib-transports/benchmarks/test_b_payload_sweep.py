@@ -25,7 +25,11 @@ def test_stdio_payload_sweep(payload_label):
     async def run():
         payload, count = PAYLOAD_CASES[payload_label]
         proc = await asyncio.create_subprocess_exec(
-            sys.executable, "-m", "grpclib_transports", "server", "--stdio",
+            sys.executable,
+            "-m",
+            "grpclib_transports",
+            "server",
+            "--stdio",
             stdin=asyncio.subprocess.PIPE,
             stdout=asyncio.subprocess.PIPE,
             stderr=asyncio.subprocess.PIPE,
@@ -40,6 +44,7 @@ def test_stdio_payload_sweep(payload_label):
             if proc.stderr is not None:
                 await asyncio.wait_for(proc.stderr.read(), timeout=3)
             await proc.wait()
+
     _run(f"stdio ({payload_label}, p=1)", run())
 
 
@@ -77,4 +82,5 @@ def test_unixproc_payload_sweep(payload_label):
             await proc.wait()
             with contextlib.suppress(OSError):
                 await anyio.Path(sock).unlink()
+
     _run(f"unixproc ({payload_label}, p=1)", run())

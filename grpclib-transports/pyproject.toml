@@ -6,24 +6,13 @@ build-backend = "hatchling.build"
 name = "grpclib-transports"
 version = "0.1.0"
 description = "gRPC over custom transports (stdio, SSH)"
-authors = [
-    { name="Carl Andersson", email="github@lillecarl.com" }
-]
+authors = [{ name = "Carl Andersson", email = "github@lillecarl.com" }]
 requires-python = ">=3.12"
-dependencies = [
-    "grpclib",
-    "h2",
-]
+dependencies = ["grpclib", "h2"]
 
 [project.optional-dependencies]
-docs = [
-    "furo",
-    "myst-parser",
-    "sphinx",
-]
-ssh = [
-    "asyncssh",
-]
+docs = ["furo", "myst-parser", "sphinx"]
+ssh = ["asyncssh"]
 
 [project.scripts]
 grpclib-transports = "grpclib_transports.__main__:main"

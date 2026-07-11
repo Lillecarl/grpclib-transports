@@ -24,6 +24,7 @@ def _bump_pipe_buf(proc: asyncio.subprocess.Process) -> None:
     """Increase kernel pipe buffer size on subprocess pipes."""
     _bump_subprocess_pipe_buffers(proc, tuning=DEFAULT_TUNING)
 
+
 SMALL_COUNT = 200
 LARGE_COUNT = 5
 LARGE_SIZE = 1024 * 1024
@@ -78,36 +79,34 @@ def _report(label, count, elapsed, payload_size, samples):
 
     m = re.match(r"(\w+) \((\w+), p=(\d+)\)", label)
     if m:
-        _bench_results.append({
-            "transport": m.group(1),
-            "type": m.group(2),
-            "parallelism": int(m.group(3)),
-            "count": count,
-            "elapsed": elapsed,
-            "payload_size": payload_size,
-            "msgs_per_sec": msgs_per_sec,
-            "mb_per_sec": mb_per_sec,
-            "sample_rates": [
-                _sample_rate(count, sample, payload_size)
-                for sample in samples
-            ],
-        })
+        _bench_results.append(
+            {
+                "transport": m.group(1),
+                "type": m.group(2),
+                "parallelism": int(m.group(3)),
+                "count": count,
+                "elapsed": elapsed,
+                "payload_size": payload_size,
+                "msgs_per_sec": msgs_per_sec,
+                "mb_per_sec": mb_per_sec,
+                "sample_rates": [_sample_rate(count, sample, payload_size) for sample in samples],
+            }
+        )
 
 
 def _report_latency(label, count, elapsed, samples):
     m = re.match(r"(\w+) \((\w+)\)", label)
     if m:
-        _latency_results.append({
-            "transport": m.group(1),
-            "type": m.group(2),
-            "count": count,
-            "elapsed": elapsed,
-            "ms_per_op": elapsed / count * 1000,
-            "sample_ms_per_op": [
-                sample / count * 1000
-                for sample in samples
-            ],
-        })
+        _latency_results.append(
+            {
+                "transport": m.group(1),
+                "type": m.group(2),
+                "count": count,
+                "elapsed": elapsed,
+                "ms_per_op": elapsed / count * 1000,
+                "sample_ms_per_op": [sample / count * 1000 for sample in samples],
+            }
+        )
 
 
 def _dump_tasks(label: str, loop: asyncio.AbstractEventLoop) -> Path:
@@ -180,10 +179,7 @@ async def _bench(label, payload, count, channel, parallelism=1):
     stub = demo_grpc.GreeterStub(channel)
     req = demo_pb2.HelloRequest(name="bench", payload=payload)
     await _bench_warmup(stub, req, parallelism=parallelism)
-    samples = [
-        await _bench_once(stub, req, count, parallelism=parallelism)
-        for _ in range(BENCH_SAMPLES)
-    ]
+    samples = [await _bench_once(stub, req, count, parallelism=parallelism) for _ in range(BENCH_SAMPLES)]
     elapsed = statistics.median(samples)
     _report(label, count, elapsed, len(payload), samples)
 
@@ -319,9 +315,7 @@ def _build_throughput_table(test_type: str, rows: list[dict]) -> Table:
     for t in transports:
         vals: list[str] = [t]
         for p in parallelisms:
-            match = next(
-                (r for r in rows if r["transport"] == t and r["parallelism"] == p), None
-            )
+            match = next((r for r in rows if r["transport"] == t and r["parallelism"] == p), None)
             if match:
                 if match["payload_size"]:
                     thr = _fmt_mb(match["mb_per_sec"])
