@@ -1,6 +1,6 @@
 {
   mkShell,
-  python3,
+  python,
   proto,
   asyncssh,
   pytest,
@@ -9,9 +9,12 @@
   grpclib-transports,
   pyright,
   ruff,
+  sphinx,
+  myst-parser,
+  furo,
 }:
 let
-  python = python3.withPackages (
+  pythonEnv = python.withPackages (
     pp:
     grpclib-transports.dependencies
     ++ [
@@ -20,12 +23,15 @@ let
       anyio
       pytest
       pyinstrument
+      sphinx
+      myst-parser
+      furo
     ]
   );
 in
 mkShell {
   packages = [
-    python
+    pythonEnv
     pyright
     ruff
   ];
