@@ -1,5 +1,11 @@
 from __future__ import annotations
 
+from grpclib_transports.bidi import (
+    LogicalFrame as LogicalFrame,
+    LogicalRpcPeer as LogicalRpcPeer,
+    PeerClosedError as PeerClosedError,
+    RemoteCallError as RemoteCallError,
+)
 from grpclib_transports.client import (
     connect_tcp as connect_tcp,
     connect_unix as connect_unix,
@@ -46,7 +52,11 @@ from grpclib_transports.transfer import (
 __all__ = [
     "DEFAULT_TUNING",
     "BaseCustomTransport",
+    "LogicalFrame",
+    "LogicalRpcPeer",
+    "PeerClosedError",
     "PeerIdentity",
+    "RemoteCallError",
     "TransportTuning",
     "Server",
     "SshChannel",
