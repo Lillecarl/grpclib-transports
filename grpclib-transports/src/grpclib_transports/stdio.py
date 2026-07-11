@@ -133,6 +133,7 @@ async def serve_stdio(
     handlers: list[IServable],
     *,
     tuning: TransportTuning = DEFAULT_TUNING,
+    max_concurrency: int | None = None,
 ) -> None:
     """Serve gRPC over the current process's stdin/stdout.
 
@@ -142,7 +143,13 @@ async def serve_stdio(
     reader, _writer, transport = await stdio_streams(tuning=tuning)
 
     with contextlib.redirect_stdout(sys.stderr):
-        await serve_h2(handlers, reader, transport, tuning=tuning)
+        await serve_h2(
+            handlers,
+            reader,
+            transport,
+            tuning=tuning,
+            max_concurrency=max_concurrency,
+        )
 
 
 def bump_subprocess_pipe_buffers(

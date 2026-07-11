@@ -29,6 +29,8 @@ from h2.exceptions import StreamClosedError, StreamIDTooLowError
 from h2.settings import SettingCodes
 from hyperframe.frame import RstStreamFrame
 
+from grpclib_transports.limits import limit_services_concurrency
+
 if TYPE_CHECKING:
     from collections.abc import Sequence
 
@@ -405,9 +407,15 @@ async def serve_h2(
     transport: Any,
     *,
     tuning: TransportTuning = DEFAULT_TUNING,
+    max_concurrency: int | None = None,
 ) -> None:
     """Build a server protocol, wire it to a transport, and pump frames."""
-    mapping = build_mapping(handlers)
+    mapping = build_mapping(
+        limit_services_concurrency(
+            handlers,
+            max_concurrency=max_concurrency,
+        )
+    )
     protocol = make_server_protocol(mapping, tuning=tuning)
     init_h2_transport(protocol, transport, tuning=tuning)
     await pump(protocol, reader, tuning=tuning)

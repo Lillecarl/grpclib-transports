@@ -113,6 +113,7 @@ async def serve_multiprocessing_endpoint(
     handlers: Collection[IServable],
     *,
     tuning: TransportTuning = DEFAULT_TUNING,
+    max_concurrency: int | None = None,
 ) -> None:
     """Serve gRPC over a multiprocessing pipe endpoint."""
     reader, _writer, transport = await pipe_streams_from_fds(
@@ -122,19 +123,27 @@ async def serve_multiprocessing_endpoint(
         tuning=tuning,
     )
     endpoint.close_connections()
-    await serve_h2(tuple(handlers), reader, transport, tuning=tuning)
+    await serve_h2(
+        tuple(handlers),
+        reader,
+        transport,
+        tuning=tuning,
+        max_concurrency=max_concurrency,
+    )
 
 
 def _run_multiprocessing_worker(
     endpoint: MultiprocessingPipeEndpoint,
     service_factory: ServiceFactory,
     tuning: TransportTuning,
+    max_concurrency: int | None,
 ) -> None:
     async def run() -> None:
         await serve_multiprocessing_endpoint(
             endpoint,
             tuple(service_factory()),
             tuning=tuning,
+            max_concurrency=max_concurrency,
         )
 
     asyncio.run(run())
@@ -156,6 +165,7 @@ async def multiprocessing_worker(
     context: Any | None = None,
     preload: Sequence[str] = (),
     tuning: TransportTuning = DEFAULT_TUNING,
+    max_concurrency: int | None = None,
 ) -> AsyncGenerator[PipeChannel]:
     """Start a forkserver worker process and yield a gRPC channel to it.
 
@@ -165,7 +175,7 @@ async def multiprocessing_worker(
     pair = multiprocessing_pipe_pair(context=context, preload=preload)
     proc = pair.context.Process(
         target=_run_multiprocessing_worker,
-        args=(pair.child, service_factory, tuning),
+        args=(pair.child, service_factory, tuning, max_concurrency),
     )
     proc.start()
     pair.close_child_connections()

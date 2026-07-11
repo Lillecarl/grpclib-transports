@@ -307,6 +307,7 @@ class WorkerHost:
         client_factory: ClientFactory[ClientT] | None = None,
         count: int = 1,
         preload: Sequence[str] = (),
+        max_concurrency: int | None = None,
     ) -> AsyncGenerator[WorkerPool[ClientT]]:
         if count <= 0:
             raise ValueError("count must be positive")
@@ -318,6 +319,7 @@ class WorkerHost:
                         service_factory,
                         preload=preload,
                         tuning=self.tuning,
+                        max_concurrency=max_concurrency,
                     ),
                     worker_id=f"multiprocessing-{index + 1}",
                     client_factory=client_factory,

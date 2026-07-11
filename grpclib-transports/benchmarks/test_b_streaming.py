@@ -12,7 +12,7 @@ from typing import Any
 import pytest
 from anyio import Path
 from conftest import BENCH_SAMPLES, bump_pipe_buf, report_bench, run_bench
-from greeter import greeter_grpc, greeter_pb2
+from greeter import common_pb2, server_grpc, worker_grpc
 from grpclib.client import Channel
 from grpclib_transports.protocol import DEFAULT_TUNING, make_config
 from grpclib_transports.stdio import StdioChannel
@@ -22,7 +22,7 @@ TOTAL_SIZE = 8 * 1024 * 1024
 UPLOAD_COUNT = 2
 UPLOAD_DATA = os.urandom(TOTAL_SIZE)
 UPLOAD_MESSAGES = [
-    greeter_pb2.HelloRequest(name="chunk", payload=chunk)
+    common_pb2.HelloRequest(name="chunk", payload=chunk)
     for chunk in iter_chunks(UPLOAD_DATA, DEFAULT_TUNING.transfer_chunk_size)
 ]
 
@@ -32,8 +32,8 @@ async def _upload_once(stub: Any) -> None:
     assert response.message == f"Uploaded {TOTAL_SIZE} bytes"
 
 
-async def _bench_upload(label: str, channel: Any) -> None:
-    stub = greeter_grpc.GreeterStub(channel)
+async def _bench_upload(label: str, channel: Any, *, worker: bool = False) -> None:
+    stub = worker_grpc.GreeterWorkerStub(channel) if worker else server_grpc.GreeterStub(channel)
     await _upload_once(stub)
 
     samples: list[float] = []
@@ -68,7 +68,7 @@ def test_streaming_upload_8mib(transport: str) -> None:
         bump_pipe_buf(proc)
         channel = StdioChannel(proc.stdout, proc.stdin)
         try:
-            await _bench_upload("stdio (stream8MiB, p=1)", channel)
+            await _bench_upload("stdio (stream8MiB, p=1)", channel, worker=True)
         finally:
             await channel.aclose()
             proc.kill()

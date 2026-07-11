@@ -11,7 +11,7 @@ import traceback
 from pathlib import Path
 from typing import Any
 
-from greeter import greeter_grpc, greeter_pb2
+from greeter import common_pb2, server_grpc, worker_grpc
 from grpclib_transports.protocol import DEFAULT_TUNING
 from grpclib_transports.stdio import bump_subprocess_pipe_buffers
 from rich.console import Console
@@ -177,8 +177,17 @@ async def _bench_once(stub: Any, req: Any, count: int, parallelism: int = 1) -> 
 
 
 async def bench(label: str, payload: bytes, count: int, channel: Any, parallelism: int = 1) -> None:
-    stub = greeter_grpc.GreeterStub(channel)
-    req = greeter_pb2.HelloRequest(name="bench", payload=payload)
+    stub = server_grpc.GreeterStub(channel)
+    req = common_pb2.HelloRequest(name="bench", payload=payload)
+    await _bench_warmup(stub, req, parallelism=parallelism)
+    samples = [await _bench_once(stub, req, count, parallelism=parallelism) for _ in range(BENCH_SAMPLES)]
+    elapsed = statistics.median(samples)
+    report_bench(label, count, elapsed, len(payload), samples)
+
+
+async def bench_worker(label: str, payload: bytes, count: int, channel: Any, parallelism: int = 1) -> None:
+    stub = worker_grpc.GreeterWorkerStub(channel)
+    req = common_pb2.HelloRequest(name="bench", payload=payload)
     await _bench_warmup(stub, req, parallelism=parallelism)
     samples = [await _bench_once(stub, req, count, parallelism=parallelism) for _ in range(BENCH_SAMPLES)]
     elapsed = statistics.median(samples)

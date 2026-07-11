@@ -7,6 +7,7 @@ from typing import TYPE_CHECKING, Any
 
 from grpclib.server import Server as GrpclibServer
 
+from grpclib_transports.limits import limit_services_concurrency
 from grpclib_transports.protocol import DEFAULT_TUNING, TransportTuning, make_config
 from grpclib_transports.workers import WorkerHost
 
@@ -29,9 +30,13 @@ class Endpoint:
         *,
         codec: CodecBase | None = None,
         status_details_codec: StatusDetailsCodecBase | None = None,
+        max_concurrency: int | None = None,
     ) -> None:
         self.app = app
-        self.handlers = tuple(handlers)
+        self.handlers = limit_services_concurrency(
+            handlers,
+            max_concurrency=max_concurrency,
+        )
         self.codec = codec
         self.status_details_codec = status_details_codec
 
@@ -125,12 +130,14 @@ class Server:
         *,
         codec: CodecBase | None = None,
         status_details_codec: StatusDetailsCodecBase | None = None,
+        max_concurrency: int | None = None,
     ) -> Endpoint:
         return Endpoint(
             self,
             handlers,
             codec=codec,
             status_details_codec=status_details_codec,
+            max_concurrency=max_concurrency,
         )
 
     def track_server(self, server: GrpclibServer) -> None:

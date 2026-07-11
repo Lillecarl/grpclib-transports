@@ -18,6 +18,12 @@ from grpclib_transports.client import (
 from grpclib_transports.client import (
     connect_unix as connect_unix,
 )
+from grpclib_transports.limits import (
+    ConcurrencyLimitedService as ConcurrencyLimitedService,
+)
+from grpclib_transports.limits import (
+    limit_services_concurrency as limit_services_concurrency,
+)
 from grpclib_transports.multiprocessing import (
     MultiprocessingPipeEndpoint as MultiprocessingPipeEndpoint,
 )
@@ -162,6 +168,7 @@ from grpclib_transports.workers import (
 __all__ = [
     "DEFAULT_TUNING",
     "BaseCustomTransport",
+    "ConcurrencyLimitedService",
     "Endpoint",
     "LogicalFrame",
     "LogicalRpcPeer",
@@ -195,6 +202,7 @@ __all__ = [
     "is_ssh_available",
     "iter_chunks",
     "iter_file_chunks",
+    "limit_services_concurrency",
     "local_process_identity",
     "make_config",
     "make_h2_config",

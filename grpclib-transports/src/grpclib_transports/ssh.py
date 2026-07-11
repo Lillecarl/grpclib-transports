@@ -160,6 +160,7 @@ async def serve_ssh(
     port: int = 8022,
     *,
     tuning: TransportTuning = DEFAULT_TUNING,
+    max_concurrency: int | None = None,
 ) -> None:
     """Start an asyncssh server that speaks H2 on each session.
 
@@ -179,7 +180,13 @@ async def serve_ssh(
 
     async def session_handler(stdin: Any, stdout: Any, _stderr: Any) -> None:
         transport = SshTransport(stdin, stdout, tuning=tuning)
-        await serve_h2(handlers, stdin, transport, tuning=tuning)
+        await serve_h2(
+            handlers,
+            stdin,
+            transport,
+            tuning=tuning,
+            max_concurrency=max_concurrency,
+        )
 
     acceptor = await asyncssh.create_server(
         _DemoSSHServer,

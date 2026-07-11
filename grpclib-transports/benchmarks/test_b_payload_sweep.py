@@ -8,7 +8,7 @@ import tempfile
 
 import pytest
 from anyio import Path
-from conftest import bench, bump_pipe_buf, run_bench
+from conftest import bench, bench_worker, bump_pipe_buf, run_bench
 from grpclib.client import Channel
 from grpclib_transports.protocol import make_config
 from grpclib_transports.stdio import StdioChannel
@@ -37,7 +37,7 @@ def test_stdio_payload_sweep(payload_label: str) -> None:
         bump_pipe_buf(proc)
         channel = StdioChannel(proc.stdout, proc.stdin)
         try:
-            await bench(f"stdio ({payload_label}, p=1)", payload, count, channel)
+            await bench_worker(f"stdio ({payload_label}, p=1)", payload, count, channel)
         finally:
             await channel.aclose()
             proc.kill()

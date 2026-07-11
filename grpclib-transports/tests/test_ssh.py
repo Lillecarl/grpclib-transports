@@ -6,8 +6,8 @@ from pathlib import Path
 from typing import Any
 
 import asyncssh
-from greeter import greeter_grpc, greeter_pb2
-from grpclib_transports.example.server import Greeter
+from greeter import common_pb2, server_grpc, worker_grpc
+from grpclib_transports.example.server import Greeter, WorkerGreeter
 from grpclib_transports.protocol import DEFAULT_TUNING, serve_h2
 from grpclib_transports.ssh import SshTransport, connect_ssh, connect_ssh_stdio
 
@@ -72,8 +72,8 @@ async def test_ssh_transport() -> None:
                     "chacha20-poly1305@openssh.com",
                 ],
             ) as channel:
-                stub = greeter_grpc.GreeterStub(channel)
-                response = await stub.SayHello(greeter_pb2.HelloRequest(name="SSH"))
+                stub = server_grpc.GreeterStub(channel)
+                response = await stub.SayHello(common_pb2.HelloRequest(name="SSH"))
                 assert response.message == "Hello, SSH!"
         finally:
             acceptor.close()
@@ -96,7 +96,7 @@ async def test_ssh_stdio_command_transport() -> None:
 
         async def session_handler(stdin: Any, stdout: Any, _stderr: Any):
             transport = SshTransport(stdin, stdout)
-            await serve_h2([Greeter()], stdin, transport)
+            await serve_h2([WorkerGreeter()], stdin, transport)
 
         acceptor = await asyncssh.listen(
             sock=sock,
@@ -118,8 +118,8 @@ async def test_ssh_stdio_command_transport() -> None:
                 password="test",
                 sock=client_sock,
             ) as channel:
-                stub = greeter_grpc.GreeterStub(channel)
-                response = await stub.SayHello(greeter_pb2.HelloRequest(name="SSH stdio"))
+                stub = worker_grpc.GreeterWorkerStub(channel)
+                response = await stub.SayHello(common_pb2.HelloRequest(name="SSH stdio"))
                 assert response.message == "Hello, SSH stdio!"
         finally:
             acceptor.close()

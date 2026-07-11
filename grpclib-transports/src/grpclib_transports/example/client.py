@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from typing import Any
 
-from greeter import greeter_grpc, greeter_pb2
+from greeter import common_pb2, server_grpc, worker_grpc
 
 from grpclib_transports.client import connect_unix
 from grpclib_transports.ssh import connect_ssh
@@ -10,8 +10,14 @@ from grpclib_transports.stdio import StdioChannel, stdio_streams
 
 
 async def greet(channel: Any, name: str = "World") -> None:
-    stub = greeter_grpc.GreeterStub(channel)
-    request = greeter_pb2.HelloRequest(name=name)
+    stub = server_grpc.GreeterStub(channel)
+    request = common_pb2.HelloRequest(name=name)
+    await stub.SayHello(request)
+
+
+async def greet_worker(channel: Any, name: str = "World") -> None:
+    stub = worker_grpc.GreeterWorkerStub(channel)
+    request = common_pb2.HelloRequest(name=name)
     await stub.SayHello(request)
 
 
@@ -24,7 +30,7 @@ async def greet_stdio(name: str = "World") -> None:
     reader, writer, transport = await stdio_streams()
     channel = StdioChannel(reader, writer, transport=transport)
     try:
-        await greet(channel, name)
+        await greet_worker(channel, name)
     finally:
         channel.close()
 

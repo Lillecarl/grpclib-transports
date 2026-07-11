@@ -4,19 +4,19 @@ import asyncio
 import signal
 import typing
 
-from greeter import greeter_grpc, greeter_pb2
+from greeter import common_pb2, server_grpc, worker_grpc
 
 from grpclib_transports.protocol import signal_stop
 from grpclib_transports.server import Server
 
 
-class Greeter(greeter_grpc.GreeterBase):
+class Greeter(server_grpc.GreeterBase):
     @typing.override
     async def SayHello(self, stream: typing.Any) -> None:
         request = await stream.recv_message()
         if request is None:
             return
-        reply = greeter_pb2.HelloReply(message=f"Hello, {request.name}!")
+        reply = common_pb2.HelloReply(message=f"Hello, {request.name}!")
         await stream.send_message(reply)
 
     @typing.override
@@ -27,7 +27,28 @@ class Greeter(greeter_grpc.GreeterBase):
             if request is None:
                 break
             total += len(request.payload)
-        reply = greeter_pb2.HelloReply(message=f"Uploaded {total} bytes")
+        reply = common_pb2.HelloReply(message=f"Uploaded {total} bytes")
+        await stream.send_message(reply)
+
+
+class WorkerGreeter(worker_grpc.GreeterWorkerBase):
+    @typing.override
+    async def SayHello(self, stream: typing.Any) -> None:
+        request = await stream.recv_message()
+        if request is None:
+            return
+        reply = common_pb2.HelloReply(message=f"Hello, {request.name}!")
+        await stream.send_message(reply)
+
+    @typing.override
+    async def Upload(self, stream: typing.Any) -> None:
+        total = 0
+        while True:
+            request = await stream.recv_message()
+            if request is None:
+                break
+            total += len(request.payload)
+        reply = common_pb2.HelloReply(message=f"Uploaded {total} bytes")
         await stream.send_message(reply)
 
 

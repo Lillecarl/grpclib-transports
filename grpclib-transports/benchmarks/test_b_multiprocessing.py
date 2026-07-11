@@ -5,8 +5,8 @@ import os
 from typing import Any
 
 import pytest
-from conftest import LARGE_COUNT, LARGE_PAYLOAD, SMALL_COUNT, SMALL_PAYLOAD, bench, run_bench
-from grpclib_transports.example.server import Greeter
+from conftest import LARGE_COUNT, LARGE_PAYLOAD, SMALL_COUNT, SMALL_PAYLOAD, bench_worker, run_bench
+from grpclib_transports.example.server import WorkerGreeter
 from grpclib_transports.multiprocessing import (
     MultiprocessingPipeEndpoint,
     multiprocessing_pipe_pair,
@@ -23,7 +23,7 @@ def _serve_multiprocessing_worker(endpoint: MultiprocessingPipeEndpoint) -> None
             transport_name="multiprocessing-worker",
         )
         endpoint.close_connections()
-        await serve_h2([Greeter()], reader, transport)
+        await serve_h2([WorkerGreeter()], reader, transport)
 
     asyncio.run(run())
 
@@ -51,14 +51,14 @@ def test_multiprocessing(parallelism: int) -> None:
         channel = await pair.parent.open_channel()
         pair.close_parent_connections()
         try:
-            await bench(
+            await bench_worker(
                 f"multiprocessing (small, p={parallelism})",
                 SMALL_PAYLOAD,
                 SMALL_COUNT,
                 channel,
                 parallelism=parallelism,
             )
-            await bench(
+            await bench_worker(
                 f"multiprocessing (large, p={parallelism})",
                 LARGE_PAYLOAD,
                 LARGE_COUNT,

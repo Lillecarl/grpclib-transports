@@ -5,8 +5,8 @@ import contextlib
 import multiprocessing as mp
 import os
 
-from greeter import greeter_grpc, greeter_pb2
-from grpclib_transports.example.server import Greeter
+from greeter import common_pb2, server_grpc, worker_grpc
+from grpclib_transports.example.server import Greeter, WorkerGreeter
 from grpclib_transports.multiprocessing import multiprocessing_pipe_pair
 from grpclib_transports.multiprocessing import multiprocessing_worker
 from grpclib_transports.pipes import (
@@ -16,8 +16,8 @@ from grpclib_transports.pipes import (
 from grpclib_transports.protocol import serve_h2
 
 
-def _worker_services() -> list[Greeter]:
-    return [Greeter()]
+def _worker_services() -> list[WorkerGreeter]:
+    return [WorkerGreeter()]
 
 
 async def _assert_pipe_round_trip(
@@ -46,8 +46,8 @@ async def _assert_pipe_round_trip(
         transport=client_transport,
     )
     try:
-        stub = greeter_grpc.GreeterStub(channel)
-        response = await stub.SayHello(greeter_pb2.HelloRequest(name="Pipe"))
+        stub = server_grpc.GreeterStub(channel)
+        response = await stub.SayHello(common_pb2.HelloRequest(name="Pipe"))
         assert response.message == "Hello, Pipe!"
     finally:
         await channel.aclose()
@@ -88,6 +88,6 @@ async def test_multiprocessing_pipe_pair_uses_forkserver_context() -> None:
 
 async def test_multiprocessing_worker_context_manager() -> None:
     async with multiprocessing_worker(_worker_services, preload=["greeter"]) as channel:
-        stub = greeter_grpc.GreeterStub(channel)
-        response = await stub.SayHello(greeter_pb2.HelloRequest(name="Worker"))
+        stub = worker_grpc.GreeterWorkerStub(channel)
+        response = await stub.SayHello(common_pb2.HelloRequest(name="Worker"))
         assert response.message == "Hello, Worker!"

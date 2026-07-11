@@ -34,10 +34,16 @@ buildPythonPackage {
       --python_out="src/greeter" \
       --grpclib_python_out="src/greeter" \
       --mypy_out="src/greeter" \
-      greeter.proto
+      common.proto \
+      server.proto \
+      worker.proto
 
-    substituteInPlace src/greeter/greeter_grpc.py \
-      --replace-fail "import greeter_pb2" "from . import greeter_pb2"
+    for file in src/greeter/*_pb2.py src/greeter/*_pb2.pyi src/greeter/*_grpc.py; do
+      substituteInPlace "$file" \
+        --replace "import common_pb2" "from . import common_pb2" \
+        --replace "import server_pb2" "from . import server_pb2" \
+        --replace "import worker_pb2" "from . import worker_pb2"
+    done
   '';
 
   meta = with lib; {

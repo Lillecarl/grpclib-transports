@@ -2,7 +2,7 @@ import asyncio
 import sys
 
 import pytest
-from conftest import LARGE_COUNT, LARGE_PAYLOAD, SMALL_COUNT, SMALL_PAYLOAD, bench, bump_pipe_buf, run_bench
+from conftest import LARGE_COUNT, LARGE_PAYLOAD, SMALL_COUNT, SMALL_PAYLOAD, bench_worker, bump_pipe_buf, run_bench
 from grpclib_transports.stdio import StdioChannel
 
 
@@ -22,8 +22,12 @@ def test_stdio(parallelism: int) -> None:
         bump_pipe_buf(proc)
         channel = StdioChannel(proc.stdout, proc.stdin)
         try:
-            await bench(f"stdio (small, p={parallelism})", SMALL_PAYLOAD, SMALL_COUNT, channel, parallelism=parallelism)
-            await bench(f"stdio (large, p={parallelism})", LARGE_PAYLOAD, LARGE_COUNT, channel, parallelism=parallelism)
+            await bench_worker(
+                f"stdio (small, p={parallelism})", SMALL_PAYLOAD, SMALL_COUNT, channel, parallelism=parallelism
+            )
+            await bench_worker(
+                f"stdio (large, p={parallelism})", LARGE_PAYLOAD, LARGE_COUNT, channel, parallelism=parallelism
+            )
         finally:
             await channel.aclose()
             proc.kill()

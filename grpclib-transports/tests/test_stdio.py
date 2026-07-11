@@ -1,7 +1,7 @@
 import asyncio
 import sys
 
-from greeter import greeter_grpc, greeter_pb2
+from greeter import common_pb2, worker_grpc
 from grpclib_transports.stdio import stdio_worker
 
 
@@ -10,6 +10,6 @@ async def test_stdio_transport() -> None:
         [sys.executable, "-m", "grpclib_transports", "server", "--stdio"],
         stderr=asyncio.subprocess.PIPE,
     ) as channel:
-        stub = greeter_grpc.GreeterStub(channel)
-        response = await stub.SayHello(greeter_pb2.HelloRequest(name="Stdio"))
+        stub = worker_grpc.GreeterWorkerStub(channel)
+        response = await stub.SayHello(common_pb2.HelloRequest(name="Stdio"))
         assert response.message == "Hello, Stdio!"
