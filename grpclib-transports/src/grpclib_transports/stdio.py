@@ -6,10 +6,13 @@ import asyncio
 import contextlib
 import fcntl
 import sys
+from collections.abc import Callable, Collection
 from typing import TYPE_CHECKING, Any
 
 from grpclib import client
+from grpclib._typing import IServable
 
+from grpclib_transports.control import WorkerBackchannel, open_parent_control_peer
 from grpclib_transports.protocol import (
     DEFAULT_TUNING,
     BaseCustomTransport,
@@ -27,9 +30,9 @@ if TYPE_CHECKING:
     from collections.abc import AsyncGenerator, Mapping, Sequence
     from pathlib import Path
 
-    from grpclib._typing import IServable
     from grpclib.protocol import H2Protocol
 
+BackchannelServiceFactory = Callable[[WorkerBackchannel], Collection[IServable]]
 _SUBPROCESS_CLOSE_TIMEOUT = 5.0
 
 
@@ -152,6 +155,21 @@ async def serve_stdio(
         )
 
 
+async def serve_stdio_with_backchannel(
+    service_factory: BackchannelServiceFactory,
+    *,
+    tuning: TransportTuning = DEFAULT_TUNING,
+    max_concurrency: int | None = None,
+) -> None:
+    """Serve stdio gRPC handlers plus a worker-to-parent backchannel service."""
+    backchannel = WorkerBackchannel()
+    await serve_stdio(
+        [*service_factory(backchannel), backchannel.service()],
+        tuning=tuning,
+        max_concurrency=max_concurrency,
+    )
+
+
 def bump_subprocess_pipe_buffers(
     proc: asyncio.subprocess.Process,
     *,
@@ -216,6 +234,28 @@ async def stdio_worker(
     finally:
         await channel.aclose()
         await _close_worker_process(proc)
+
+
+@contextlib.asynccontextmanager
+async def stdio_worker_with_backchannel(
+    argv: Sequence[str | Path],
+    parent_services: Collection[IServable],
+    *,
+    tuning: TransportTuning = DEFAULT_TUNING,
+    cwd: str | Path | None = None,
+    env: Mapping[str, str] | None = None,
+    stderr: Any = None,
+) -> AsyncGenerator[StdioChannel]:
+    """Spawn a stdio worker and expose parent services on the same channel."""
+    async with stdio_worker(
+        argv,
+        tuning=tuning,
+        cwd=cwd,
+        env=env,
+        stderr=stderr,
+    ) as channel:
+        async with open_parent_control_peer(channel, parent_services):
+            yield channel
 
 
 class StdioChannel(client.Channel):

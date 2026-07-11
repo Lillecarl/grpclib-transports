@@ -16,7 +16,11 @@ from grpclib_transports.multiprocessing import (
     multiprocessing_worker_with_backchannel,
 )
 from grpclib_transports.protocol import DEFAULT_TUNING, TransportTuning
-from grpclib_transports.stdio import StdioChannel, stdio_worker
+from grpclib_transports.stdio import (
+    StdioChannel,
+    stdio_worker,
+    stdio_worker_with_backchannel,
+)
 
 if TYPE_CHECKING:
     from collections.abc import AsyncGenerator, Collection
@@ -142,6 +146,7 @@ class StdioPeerPool[PeerT: LogicalRpcPeer]:
         self._cwd = cwd
         self._env = env
         self._stderr = stderr
+        self._parent_services = ()
         self._stack = contextlib.AsyncExitStack()
         self.registry: PeerRegistry[PeerT] = PeerRegistry()
 
@@ -154,13 +159,7 @@ class StdioPeerPool[PeerT: LogicalRpcPeer]:
     async def __aenter__(self) -> StdioPeerPool[PeerT]:
         for index in range(self._size):
             channel = await self._stack.enter_async_context(
-                stdio_worker(
-                    self._argv,
-                    tuning=self._tuning,
-                    cwd=self._cwd,
-                    env=self._env,
-                    stderr=self._stderr,
-                )
+                self._worker_manager()
             )
             peer = await self._peer_factory(channel)
             peer.start()
@@ -174,6 +173,31 @@ class StdioPeerPool[PeerT: LogicalRpcPeer]:
     async def __aexit__(self, *exc_info: Any) -> None:
         await self.registry.aclose()
         await self._stack.aclose()
+
+    def with_parent_services(
+        self,
+        parent_services: Collection[IServable],
+    ) -> StdioPeerPool[PeerT]:
+        self._parent_services = tuple(parent_services)
+        return self
+
+    def _worker_manager(self) -> Any:
+        if self._parent_services:
+            return stdio_worker_with_backchannel(
+                self._argv,
+                self._parent_services,
+                tuning=self._tuning,
+                cwd=self._cwd,
+                env=self._env,
+                stderr=self._stderr,
+            )
+        return stdio_worker(
+            self._argv,
+            tuning=self._tuning,
+            cwd=self._cwd,
+            env=self._env,
+            stderr=self._stderr,
+        )
 
 
 @dataclass(frozen=True)
@@ -270,7 +294,7 @@ class WorkerHost:
             cwd=cwd,
             env=env,
             stderr=stderr,
-        )
+        ).with_parent_services(self.parent_services)
 
     @contextlib.asynccontextmanager
     async def stdio_channels[ClientT = Any](
@@ -288,14 +312,25 @@ class WorkerHost:
 
         async with WorkerPool[ClientT]() as pool:
             for index in range(count):
-                await pool.add(
-                    stdio_worker(
+                if self.parent_services:
+                    manager = stdio_worker_with_backchannel(
+                        argv,
+                        self.parent_services,
+                        tuning=self.tuning,
+                        cwd=cwd,
+                        env=env,
+                        stderr=stderr,
+                    )
+                else:
+                    manager = stdio_worker(
                         argv,
                         tuning=self.tuning,
                         cwd=cwd,
                         env=env,
                         stderr=stderr,
-                    ),
+                    )
+                await pool.add(
+                    manager,
                     worker_id=f"stdio-{index + 1}",
                     client_factory=client_factory,
                     metadata={"transport": "stdio", "index": index},

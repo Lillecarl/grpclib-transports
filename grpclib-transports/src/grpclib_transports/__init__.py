@@ -159,7 +159,13 @@ from grpclib_transports.stdio import (
     serve_stdio as serve_stdio,
 )
 from grpclib_transports.stdio import (
+    serve_stdio_with_backchannel as serve_stdio_with_backchannel,
+)
+from grpclib_transports.stdio import (
     stdio_worker as stdio_worker,
+)
+from grpclib_transports.stdio import (
+    stdio_worker_with_backchannel as stdio_worker_with_backchannel,
 )
 from grpclib_transports.transfer import (
     iter_chunks as iter_chunks,
@@ -248,6 +254,8 @@ __all__ = [
     "serve_multiprocessing_endpoint",
     "serve_ssh",
     "serve_stdio",
+    "serve_stdio_with_backchannel",
     "signal_stop",
     "stdio_worker",
+    "stdio_worker_with_backchannel",
 ]
