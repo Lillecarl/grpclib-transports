@@ -7,6 +7,7 @@ Unix-domain sockets, and multiprocessing pipe pairs.
 :maxdepth: 2
 :caption: Contents
 
+examples
 api
 ```
 
