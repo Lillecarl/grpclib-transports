@@ -1,18 +1,18 @@
-{ mkShell
-, python
-, pytest
-, pyinstrument
-, grpclib-transports
-, pyright
-, ruff
-, sphinx
-, myst-parser
-, furo
-, # formatters
-  treefmt
-, nixpkgs-fmt
-, taplo
-,
+{
+  mkShell,
+  python,
+  pytest,
+  pyinstrument,
+  grpclib-transports,
+  pyright,
+  ruff,
+  sphinx,
+  myst-parser,
+  furo,
+  # formatters
+  treefmt,
+  nixfmt,
+  taplo,
 }:
 let
   pythonEnv = python.withPackages (
@@ -34,7 +34,7 @@ mkShell {
     pyright
     ruff
     treefmt
-    nixpkgs-fmt
+    nixfmt
     taplo
   ];
   shellHook = ''

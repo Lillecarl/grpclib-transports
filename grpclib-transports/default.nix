@@ -1,17 +1,17 @@
-{ lib
-, # build
-  buildPythonPackage
-, hatchling
-, # deps
-  proto
-, grpclib
-, h2
-, asyncssh ? null
-, # test inputs
-  rich
-, anyio
-, pytestCheckHook
-,
+{
+  lib,
+  # build
+  buildPythonPackage,
+  hatchling,
+  # deps
+  proto,
+  grpclib,
+  h2,
+  asyncssh ? null,
+  # test inputs
+  rich,
+  anyio,
+  pytestCheckHook,
 }:
 buildPythonPackage {
   pname = "grpclib-transports";

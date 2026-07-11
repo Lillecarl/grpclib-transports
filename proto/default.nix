@@ -1,10 +1,10 @@
-{ lib
-, buildPythonPackage
-, hatchling
-, grpcio-tools
-, grpclib
-, mypy-protobuf
-,
+{
+  lib,
+  buildPythonPackage,
+  hatchling,
+  grpcio-tools,
+  grpclib,
+  mypy-protobuf,
 }:
 buildPythonPackage {
   pname = "demo-proto";
