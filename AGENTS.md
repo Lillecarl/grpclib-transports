@@ -26,6 +26,8 @@ should never take that long, and the shorter timeout catches hangs quickly.
 
 - Use `from __future__ import annotations` in Python modules that define or use
   type annotations.
+- Module-level docstrings go **before** ``from __future__ import annotations``
+  (they are the only code Python allows before a future import).
 - Do not use string type hints such as `"Store"`. Use future annotations and
   `if TYPE_CHECKING:` imports instead.
 - Keep imports at the top of the file. Lazy imports inside functions or methods

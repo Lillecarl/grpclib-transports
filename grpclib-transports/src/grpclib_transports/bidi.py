@@ -1,3 +1,10 @@
+"""Bidirectional logical RPC peer over a frame transport.
+
+Provides a request/response/event/cancel protocol independent of the
+underlying byte-stream transport.  Useful for in-band control channels
+between processes that already share a pipe or SSH session.
+"""
+
 from __future__ import annotations
 
 import asyncio
@@ -15,6 +22,16 @@ FrameReceiver = Callable[[], Awaitable["LogicalFrame | None"]]
 
 @dataclass(frozen=True)
 class LogicalFrame:
+    """A logical RPC frame exchanged between peers.
+
+    Fields:
+        id: Monotonic request identifier (0 for events).
+        kind: Frame kind: ``"request"``, ``"response"``, ``"event"``, or ``"cancel"``.
+        method: gRPC-style method name for requests/events.
+        payload: Arbitrary data carried in the frame.
+        error: Error message carried in a response frame.
+    """
+
     id: int
     kind: FrameKind
     method: str | None = None
@@ -23,14 +40,27 @@ class LogicalFrame:
 
 
 class RemoteCallError(Exception):
+    """Raised when a remote peer responds with an error."""
     pass
 
 
 class PeerClosedError(Exception):
+    """Raised when an operation is attempted on a closed peer."""
     pass
 
-
 class LogicalRpcPeer:
+    """Bidirectional RPC peer over a logical frame transport.
+
+    Supports request/response (:meth:`call`), one-way events (:meth:`event`),
+    and cancellation.  Spawns a background reader task via :meth:`start`.
+    Close with :meth:`aclose`.
+
+    Args:
+        send_frame: Callable that sends a :class:`LogicalFrame`.
+        receive_frame: Callable that returns the next :class:`LogicalFrame` or ``None``.
+        handler: Optional request/event handler ``(method, payload) -> result``.
+    """
+
     def __init__(
         self,
         *,

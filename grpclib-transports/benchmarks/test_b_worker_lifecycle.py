@@ -6,6 +6,7 @@ import sys
 
 from conftest import STARTUP_COUNT, _bench_lifecycle, _run
 from demo import demo_grpc, demo_pb2
+from grpclib_transports.example.server import Greeter
 from grpclib_transports.multiprocessing import (
     MultiprocessingPipeEndpoint,
     multiprocessing_pipe_pair,
@@ -13,7 +14,6 @@ from grpclib_transports.multiprocessing import (
 from grpclib_transports.pipes import pipe_streams_from_fds
 from grpclib_transports.protocol import serve_h2
 from grpclib_transports.stdio import stdio_worker
-from grpclib_transports.example.server import Greeter
 
 
 def _serve_multiprocessing_worker(endpoint: MultiprocessingPipeEndpoint) -> None:

@@ -6,10 +6,10 @@ import tempfile
 import anyio
 import pytest
 from conftest import LARGE_COUNT, LARGE_PAYLOAD, SMALL_COUNT, SMALL_PAYLOAD, _bench, _run
-from grpclib_transports.example.server import Greeter
-from grpclib_transports.protocol import make_config
 from grpclib.client import Channel
 from grpclib.server import Server as GrpcServer
+from grpclib_transports.example.server import Greeter
+from grpclib_transports.protocol import make_config
 
 
 @pytest.mark.parametrize("parallelism", [1, 2, 4, 8])

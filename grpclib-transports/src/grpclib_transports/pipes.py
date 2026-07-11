@@ -1,3 +1,9 @@
+"""Raw OS pipe transport: H2 over arbitrary binary file descriptors.
+
+More general than stdio — accepts any :class:`~io.BinaryIO` pair rather
+than being hardwired to ``sys.stdin``/``sys.stdout``.
+"""
+
 from __future__ import annotations
 
 import asyncio
@@ -22,6 +28,12 @@ from grpclib_transports.protocol import (
 
 
 class PipeTransport(BaseCustomTransport):
+    """An asyncio transport that wraps a raw OS pipe pair.
+
+    Differs from :class:`~grpclib_transports.stdio.StdioTransport` in that
+    it accepts arbitrary binary file objects rather than being hardwired to
+    ``sys.stdin``/``sys.stdout``.
+    """
     def __init__(
         self,
         reader: asyncio.StreamReader,
@@ -72,6 +84,7 @@ async def pipe_streams(
     transport_name: str = "pipe",
     tuning: TransportTuning = DEFAULT_TUNING,
 ) -> tuple[asyncio.StreamReader, asyncio.StreamWriter, PipeTransport]:
+    """Create a reader/writer/transport triple from two binary file objects."""
     loop = asyncio.get_running_loop()
     reader = asyncio.StreamReader()
     await loop.connect_read_pipe(
@@ -126,6 +139,7 @@ async def pipe_streams_from_fds(
     transport_name: str = "pipe",
     tuning: TransportTuning = DEFAULT_TUNING,
 ) -> tuple[asyncio.StreamReader, asyncio.StreamWriter, PipeTransport]:
+    """Like :func:`pipe_streams` but takes integer file descriptors."""
     read_pipe = os.fdopen(read_fd, "rb", buffering=0)
     write_pipe = os.fdopen(write_fd, "wb", buffering=0)
     return await pipe_streams(
@@ -137,6 +151,7 @@ async def pipe_streams_from_fds(
 
 
 class PipeChannel(client.Channel):
+    """A gRPC channel that speaks H2 over a raw OS pipe pair."""
     def __init__(
         self,
         reader: Any,

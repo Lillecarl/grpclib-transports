@@ -1,3 +1,9 @@
+"""Shared protocol helpers: H2 configuration, tuning, transport base class, pump loop, and peer identity.
+
+This is the core module.  Nearly every other module in the package imports
+from here.
+"""
+
 from __future__ import annotations
 
 import asyncio
@@ -25,7 +31,6 @@ from h2.errors import ErrorCodes
 from h2.exceptions import StreamClosedError, StreamIDTooLowError
 from h2.settings import SettingCodes
 from hyperframe.frame import RstStreamFrame
-
 
 _SIZE_UNITS = {
     "": 1,
@@ -104,7 +109,12 @@ def _receive_frame_without_trace_repr(
 
 
 def install_h2_fast_receive_patch() -> None:
-    """Avoid h2's trace logging frame repr cost without changing frame handling."""
+    """Patch ``h2`` to skip expensive trace-logging frame reprs.
+
+    Called automatically at import time. Idempotent — subsequent calls are
+    no-ops.  Raises :exc:`RuntimeError` if the ``h2`` internals have changed
+    in a way the patch cannot handle.
+    """
     global _H2_FAST_RECEIVE_PATCH_INSTALLED
 
     if _H2_FAST_RECEIVE_PATCH_INSTALLED:
@@ -128,6 +138,22 @@ DEFAULT_HTTP2_MAX_FRAME_SIZE = 1024 * 1024
 
 @dataclass(frozen=True)
 class TransportTuning:
+    """Buffer, window, and chunk size knobs for transport performance.
+
+    All values are in bytes.  Create a tuned instance with :meth:`from_env`
+    or read the pre-computed :data:`DEFAULT_TUNING`.
+
+    Fields:
+        buffer_size: OS pipe buffer size used when bumping subprocess pipes.
+        read_chunk_size: Size of each ``read()`` call in the pump loop.
+        write_high_water: High-water mark for write buffer limits.
+        write_low_water: Low-water mark for write buffer limits.
+        http2_stream_window_size: Per-stream HTTP/2 flow-control window.
+        http2_connection_window_size: Connection-level HTTP/2 flow-control window.
+        http2_max_frame_size: Maximum HTTP/2 frame size sent to the peer.
+        transfer_chunk_size: Default chunk size for file/data chunk iterators.
+    """
+
     buffer_size: int
     read_chunk_size: int
     write_high_water: int
@@ -173,10 +199,28 @@ class TransportTuning:
 
 
 DEFAULT_TUNING = TransportTuning.from_env()
+"""Pre-computed :class:`TransportTuning` from environment variables.
+
+Overridable via ``GRPCLAB_BUFFER_SIZE``, ``GRPCLAB_TRANSFER_CHUNK_SIZE``,
+``GRPCLAB_HTTP2_STREAM_WINDOW_SIZE``, ``GRPCLAB_HTTP2_CONNECTION_WINDOW_SIZE``,
+and ``GRPCLAB_HTTP2_MAX_FRAME_SIZE`` (all support suffixes like ``8MiB``).
+"""
 
 
 @dataclass(frozen=True)
 class PeerIdentity:
+    """Identity information about the remote peer of a transport.
+
+    Fields:
+        transport: Transport type (``"stdio"``, ``"ssh"``, ``"unix"``, ``"unknown"``).
+        username: OS username of the peer, if available.
+        uid: Unix user ID of the peer.
+        gid: Unix group ID of the peer.
+        pid: Process ID of the peer.
+        group_ids: Supplementary group IDs.
+        group_names: Supplementary group names (resolved from *group_ids*).
+    """
+
     transport: str
     username: str | None
     uid: int | None = None
@@ -211,6 +255,7 @@ def _groups_for_user(username: str, gid: int) -> tuple[int, ...] | None:
 
 
 def local_process_identity(*, transport: str) -> PeerIdentity:
+    """Build a :class:`PeerIdentity` for the current process."""
     uid = os.geteuid()
     gid = os.getegid()
     username = _username_for_uid(uid)
@@ -252,6 +297,11 @@ def _unix_socket_identity(sock: socket.socket) -> PeerIdentity | None:
 
 
 def peer_identity_from_transport(transport: Any) -> PeerIdentity:
+    """Extract :class:`PeerIdentity` from an asyncio transport.
+
+    Checks for a stored ``peer_identity`` extra, an SSH username, or a
+    Unix-domain socket with ``SO_PEERCRED``.
+    """
     identity = transport.get_extra_info("peer_identity")
     if isinstance(identity, PeerIdentity):
         return identity
@@ -270,6 +320,7 @@ def peer_identity_from_transport(transport: Any) -> PeerIdentity:
 
 
 def peer_identity_from_stream(stream: Any) -> PeerIdentity:
+    """Extract :class:`PeerIdentity` from a gRPC stream's underlying transport."""
     transport = stream.peer._transport
     return peer_identity_from_transport(transport)
 
@@ -313,11 +364,13 @@ class BaseCustomTransport(asyncio.Transport):
 
 
 def pause_h2_protocol(protocol: asyncio.BaseProtocol | None) -> None:
+    """Pause writing on an H2 protocol, if set."""
     if protocol is not None:
         protocol.pause_writing()
 
 
 def resume_h2_protocol(protocol: asyncio.BaseProtocol | None) -> None:
+    """Resume writing on an H2 protocol, if set."""
     if protocol is not None:
         protocol.resume_writing()
 
@@ -328,6 +381,11 @@ async def pump(
     *,
     tuning: TransportTuning = DEFAULT_TUNING,
 ) -> None:
+    """Read from a byte stream and feed data into an H2 protocol.
+
+    Blocks in a loop calling ``reader.read()``.  On EOF or error, calls
+    ``protocol.connection_lost()``.
+    """
     exc: BaseException | None = None
     try:
         while True:
@@ -348,6 +406,7 @@ async def serve_h2(
     *,
     tuning: TransportTuning = DEFAULT_TUNING,
 ) -> None:
+    """Build a server protocol, wire it to a transport, and pump frames."""
     mapping = build_mapping(handlers)
     protocol = make_server_protocol(mapping, tuning=tuning)
     init_h2_transport(protocol, transport, tuning=tuning)
@@ -355,6 +414,11 @@ async def serve_h2(
 
 
 def make_h2_config(*, client_side: bool) -> H2Configuration:
+    """Build an ``h2`` configuration with strict validation off.
+
+    Disables inbound/outbound header validation and normalization so
+    protobuf-based headers pass through unchanged.
+    """
     return H2Configuration(
         client_side=client_side,
         header_encoding="ascii",
@@ -366,6 +430,7 @@ def make_h2_config(*, client_side: bool) -> H2Configuration:
 
 
 def make_config(tuning: TransportTuning = DEFAULT_TUNING) -> Configuration:
+    """Build a grpclib :class:`Configuration` with tuned window sizes."""
     return Configuration(
         http2_connection_window_size=tuning.http2_connection_window_size,
         http2_stream_window_size=tuning.http2_stream_window_size,
@@ -377,6 +442,7 @@ def make_server_protocol(
     *,
     tuning: TransportTuning = DEFAULT_TUNING,
 ) -> H2Protocol:
+    """Build a server-side H2 protocol with the given handler mapping."""
     config = make_config(tuning).__for_server__()
     h2_config = make_h2_config(client_side=False)
     handler = ServerHandler(mapping, ProtoCodec(), None, _DispatchServerEvents())
@@ -389,6 +455,7 @@ def init_h2_transport(
     *,
     tuning: TransportTuning = DEFAULT_TUNING,
 ) -> None:
+    """Wire an H2 protocol to a transport and advertise a tuned max frame size."""
     transport.set_protocol(protocol)
     protocol.connection_made(transport)
     protocol.connection._connection.update_settings({
@@ -398,6 +465,7 @@ def init_h2_transport(
 
 
 def build_mapping(handlers: Sequence[IServable]) -> dict[str, Handler]:
+    """Merge ``__mapping__()`` from a sequence of servable handlers into one dict."""
     mapping: dict[str, Handler] = {}
     for h in handlers:
         mapping.update(h.__mapping__())
@@ -405,5 +473,6 @@ def build_mapping(handlers: Sequence[IServable]) -> dict[str, Handler]:
 
 
 def signal_stop(stop: asyncio.Future[None]) -> None:
+    """Signal a stop future, guarding against duplicate completion."""
     if not stop.done():
         stop.set_result(None)

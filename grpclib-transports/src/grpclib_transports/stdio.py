@@ -1,3 +1,5 @@
+"""Stdio transport: H2 over a subprocess's stdin/stdout pipe pair."""
+
 from __future__ import annotations
 
 import asyncio
@@ -28,6 +30,7 @@ _SUBPROCESS_CLOSE_TIMEOUT = 5.0
 
 
 class StdioTransport(BaseCustomTransport):
+    """An asyncio transport that wraps a stdio subprocess pipe pair."""
 
     def __init__(
         self,
@@ -126,6 +129,11 @@ async def serve_stdio(
     *,
     tuning: TransportTuning = DEFAULT_TUNING,
 ) -> None:
+    """Serve gRPC over the current process's stdin/stdout.
+
+    Redirects stdout to stderr before starting so that only H2 frames go
+    over the pipe.
+    """
     reader, _writer, transport = await _stdio_streams(tuning=tuning)
 
     with contextlib.redirect_stdout(sys.stderr):
@@ -170,6 +178,10 @@ async def stdio_worker(
     env: Mapping[str, str] | None = None,
     stderr: Any = None,
 ) -> AsyncIterator[StdioChannel]:
+    """Spawn a subprocess and yield a :class:`StdioChannel` connected to its stdin/stdout.
+
+    Use as an async context manager.  The subprocess is terminated on exit.
+    """
     if not argv:
         raise ValueError("argv must not be empty")
 
@@ -195,6 +207,7 @@ async def stdio_worker(
 
 
 class StdioChannel(client.Channel):
+    """A gRPC channel that speaks H2 over a subprocess stdio pipe pair."""
 
     def __init__(
         self,

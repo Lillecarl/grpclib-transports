@@ -9,9 +9,9 @@ import tempfile
 import anyio
 import pytest
 from conftest import _bench, _bump_pipe_buf, _run
+from grpclib.client import Channel
 from grpclib_transports.protocol import make_config
 from grpclib_transports.stdio import StdioChannel
-from grpclib.client import Channel
 
 PAYLOAD_CASES = {
     "64KiB": (os.urandom(64 * 1024), 30),

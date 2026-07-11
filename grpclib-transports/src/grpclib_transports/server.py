@@ -1,3 +1,5 @@
+"""High-level gRPC server wrapper with transport-aware peer pool support."""
+
 from __future__ import annotations
 
 import socket
@@ -16,8 +18,16 @@ from grpclib_transports.workers import PeerFactory, StdioPeerPool
 
 PeerT = TypeVar("PeerT", bound=LogicalRpcPeer)
 
-
 class Server:
+    """High-level gRPC server with transport-aware peer management.
+
+    Wraps grpclib's :class:`~grpclib.server.Server` with tuned configuration
+    and a :meth:`stdio_peer_pool` factory for spawning workers over stdio pipes.
+
+    Supports Unix-domain and TCP listening via :meth:`start_unix` and
+    :meth:`start_tcp`.  Can be used as an async context manager.
+    """
+
     def __init__(
         self,
         handlers: Collection[IServable],
@@ -36,6 +46,7 @@ class Server:
 
     @property
     def raw_server(self) -> GrpclibServer:
+        """The underlying :class:`grpclib.server.Server` instance."""
         return self._server
 
     async def start(
@@ -71,6 +82,7 @@ class Server:
         *,
         backlog: int = 100,
     ) -> None:
+        """Start listening on a Unix-domain socket at *path*."""
         await self.start(path=path, backlog=backlog)
 
     async def start_tcp(
@@ -85,6 +97,7 @@ class Server:
         reuse_address: bool | None = None,
         reuse_port: bool | None = None,
     ) -> None:
+        """Start listening on a TCP socket at *host*:*port*."""
         await self.start(
             host=host,
             port=port,
@@ -106,6 +119,7 @@ class Server:
         env: Mapping[str, str] | None = None,
         stderr: Any = None,
     ) -> StdioPeerPool[PeerT]:
+        """Create a :class:`~grpclib_transports.workers.StdioPeerPool` that spawns *size* worker subprocesses."""
         return StdioPeerPool(
             argv,
             peer_factory=peer_factory,

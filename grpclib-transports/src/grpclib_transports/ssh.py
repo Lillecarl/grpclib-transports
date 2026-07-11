@@ -1,3 +1,5 @@
+"""SSH transport: H2 over asyncssh sessions and channels."""
+
 from __future__ import annotations
 
 import asyncio
@@ -28,6 +30,7 @@ _ASYNCSSH_AVAILABLE = importlib.util.find_spec("asyncssh") is not None
 
 
 def is_ssh_available() -> bool:
+    """Return ``True`` if ``asyncssh`` is importable."""
     return _ASYNCSSH_AVAILABLE
 
 
@@ -65,6 +68,12 @@ class _AsyncSshWriterAdapter:
 
 
 class SshTransport(BaseCustomTransport):
+    """An asyncio transport that wraps an asyncssh channel.
+
+    Forwards asyncssh session ``pause_writing``/``resume_writing`` callbacks
+    to the H2 protocol for end-to-end backpressure.  Restores the original
+    session callbacks on close or abort.
+    """
 
     def __init__(
         self,
@@ -150,6 +159,11 @@ async def serve_ssh(
     *,
     tuning: TransportTuning = DEFAULT_TUNING,
 ) -> None:
+    """Start an asyncssh server that speaks H2 on each session.
+
+    Generates an ephemeral Ed25519 key and accepts connections indefinitely.
+    Shuts down gracefully on SIGINT or SIGTERM.
+    """
     asyncssh = _load_asyncssh()
 
     key = asyncssh.generate_private_key("ssh-ed25519")
@@ -186,6 +200,7 @@ async def serve_ssh(
 
 
 class SshChannel(client.Channel):
+    """A gRPC channel that speaks H2 over an asyncssh session."""
 
     def __init__(
         self,
@@ -249,6 +264,11 @@ async def connect_ssh(
     tuning: TransportTuning = DEFAULT_TUNING,
     **kwargs: Any,
 ) -> AsyncIterator[SshChannel]:
+    """Connect to an SSH server and yield an :class:`SshChannel`.
+
+    Use as an async context manager.  The SSH session and channel are closed
+    on exit.
+    """
     asyncssh = _load_asyncssh()
     async with asyncssh.connect(
         host,

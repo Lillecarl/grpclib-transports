@@ -1,3 +1,5 @@
+"""Convenience helpers for creating tuned gRPC client channels."""
+
 from __future__ import annotations
 
 from pathlib import Path
@@ -15,6 +17,10 @@ def connect_unix(
     tuning: TransportTuning = DEFAULT_TUNING,
     **kwargs: Any,
 ) -> Channel:
+    """Create a :class:`grpclib.client.Channel` to a Unix-domain socket at *path*.
+
+    The channel is configured with tuned HTTP/2 window sizes from *tuning*.
+    """
     kwargs.setdefault("config", make_config(tuning))
     return Channel(path=str(path), **kwargs)
 
@@ -27,5 +33,10 @@ def connect_tcp(
     ssl: SSLContext | bool | None = None,
     **kwargs: Any,
 ) -> Channel:
+    """Create a :class:`grpclib.client.Channel` to *host*:*port* over TCP.
+
+    The channel is configured with tuned HTTP/2 window sizes from *tuning*.
+    Pass *ssl* to enable TLS.
+    """
     kwargs.setdefault("config", make_config(tuning))
     return Channel(host=host, port=port, ssl=ssl, **kwargs)

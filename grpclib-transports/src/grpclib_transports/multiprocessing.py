@@ -1,3 +1,5 @@
+"""Multiprocessing pipe-pair helpers: forkserver contexts and dup'd FDs."""
+
 from __future__ import annotations
 
 import multiprocessing as mp
@@ -14,6 +16,7 @@ def get_forkserver_context(
     *,
     preload: Sequence[str] = (),
 ) -> Any:
+    """Return a ``multiprocessing`` forkserver context, optionally preloading modules."""
     context = mp.get_context("forkserver")
     if preload:
         context.set_forkserver_preload(list(preload))
@@ -22,6 +25,12 @@ def get_forkserver_context(
 
 @dataclass(frozen=True)
 class MultiprocessingPipeEndpoint:
+    """One end of a multiprocessing pipe pair.
+
+    Call :meth:`open_channel` to create a :class:`~grpclib_transports.pipes.PipeChannel`
+    backed by the pipe file descriptors.
+    """
+
     read_connection: Any
     write_connection: Any
     transport_name: str = "multiprocessing"
@@ -53,6 +62,7 @@ class MultiprocessingPipeEndpoint:
 
 @dataclass(frozen=True)
 class MultiprocessingPipePair:
+    """A pair of :class:`MultiprocessingPipeEndpoint` — one for parent, one for child."""
     parent: MultiprocessingPipeEndpoint
     child: MultiprocessingPipeEndpoint
     context: Any
@@ -69,6 +79,10 @@ def multiprocessing_pipe_pair(
     context: Any | None = None,
     preload: Sequence[str] = (),
 ) -> MultiprocessingPipePair:
+    """Create a :class:`MultiprocessingPipePair` for parent-child communication.
+
+    If *context* is not given, calls :func:`get_forkserver_context` with *preload*.
+    """
     ctx = context or get_forkserver_context(preload=preload)
     if context is not None and preload:
         ctx.set_forkserver_preload(list(preload))

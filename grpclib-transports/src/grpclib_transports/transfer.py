@@ -1,3 +1,5 @@
+"""Chunked data and file iterators for streaming payloads."""
+
 from __future__ import annotations
 
 from collections.abc import Iterator
@@ -7,6 +9,7 @@ from grpclib_transports.protocol import DEFAULT_TUNING
 
 
 def iter_chunks(data: bytes | bytearray | memoryview, chunk_size: int) -> Iterator[bytes]:
+    """Yield *chunk_size*-byte slices of *data*."""
     if chunk_size <= 0:
         raise ValueError("chunk_size must be positive")
     view = memoryview(data)
@@ -19,6 +22,7 @@ def iter_file_chunks(
     *,
     chunk_size: int = DEFAULT_TUNING.transfer_chunk_size,
 ) -> Iterator[bytes]:
+    """Yield *chunk_size*-byte chunks from the file at *path*."""
     if chunk_size <= 0:
         raise ValueError("chunk_size must be positive")
 

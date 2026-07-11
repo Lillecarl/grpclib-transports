@@ -1,3 +1,5 @@
+"""Stdio worker pools: managed subprocess groups bridged by logical peers."""
+
 from __future__ import annotations
 
 import contextlib
@@ -17,6 +19,11 @@ PeerFactory = Callable[[StdioChannel], Awaitable[PeerT]]
 
 @dataclass(frozen=True)
 class RegisteredPeer(Generic[PeerT]):
+    """A :class:`LogicalRpcPeer` registered with an ID and optional metadata.
+
+    Delegates :meth:`call` and :meth:`event` to the wrapped peer.
+    """
+
     id: str
     peer: PeerT
     metadata: Mapping[str, Any] = field(default_factory=dict)
@@ -33,8 +40,13 @@ class RegisteredPeer(Generic[PeerT]):
     async def event(self, method: str, payload: Any = None) -> None:
         await self.peer.event(method, payload)
 
-
 class PeerRegistry(Generic[PeerT]):
+    """A thread-unsafe registry of :class:`RegisteredPeer` instances.
+
+    Supports :func:`len`, iteration, and snapshot via :meth:`snapshot`.
+    Broadcast calls to all registered peers with :meth:`call_all`.
+    """
+
     def __init__(self) -> None:
         self._next_id = itertools.count(1)
         self._peers: dict[str, RegisteredPeer[PeerT]] = {}
@@ -89,8 +101,15 @@ class PeerRegistry(Generic[PeerT]):
             await registered.peer.aclose()
             self.unregister(registered.id)
 
-
 class StdioPeerPool(Generic[PeerT]):
+    """A pool of *size* subprocess workers, each bridged by a :class:`LogicalRpcPeer`.
+
+    Use as an async context manager.  On enter, spawns *size* child processes
+    via :func:`~grpclib_transports.stdio.stdio_worker`, creates peers with
+    *peer_factory*, and registers them in :attr:`registry`.  On exit, closes
+    all peers and terminates all subprocesses.
+    """
+
     def __init__(
         self,
         argv: Sequence[str | Path],

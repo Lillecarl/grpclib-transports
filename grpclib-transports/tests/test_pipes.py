@@ -10,7 +10,6 @@ from grpclib_transports.example.server import Greeter
 from grpclib_transports.multiprocessing import multiprocessing_pipe_pair
 from grpclib_transports.pipes import (
     PipeChannel,
-    PipeTransport,
     pipe_streams_from_fds,
 )
 from grpclib_transports.protocol import serve_h2

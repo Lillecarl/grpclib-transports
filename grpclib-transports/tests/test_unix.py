@@ -4,8 +4,8 @@ import tempfile
 from pathlib import Path
 
 from demo import demo_grpc, demo_pb2
-from grpclib_transports.example.server import Greeter
 from grpclib_transports.client import connect_unix
+from grpclib_transports.example.server import Greeter
 from grpclib_transports.server import Server
 
 
