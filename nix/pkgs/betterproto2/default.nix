@@ -9,7 +9,7 @@
   grpclib,
 }:
 
-buildPythonPackage rec {
+buildPythonPackage (finalAttrs: {
   pname = "betterproto2";
   version = "0.10.0";
   pyproject = true;
@@ -37,4 +37,4 @@ buildPythonPackage rec {
   meta = {
     maintainers = with lib.maintainers; [ lillecarl ];
   };
-}
+})

@@ -9,7 +9,7 @@
   typing-extensions,
 }:
 
-buildPythonPackage rec {
+buildPythonPackage (finalAttrs: {
   pname = "betterproto2_compiler";
   version = "0.10.1";
   pyproject = true;
@@ -39,4 +39,4 @@ buildPythonPackage rec {
   meta = {
     maintainers = with lib.maintainers; [ lillecarl ];
   };
-}
+})
