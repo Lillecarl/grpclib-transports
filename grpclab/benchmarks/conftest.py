@@ -48,9 +48,11 @@ def _env_int(name: str, default: int) -> int:
 
 TIMEOUT = _env_int("GRPCLAB_BENCH_TIMEOUT", 30)
 BENCH_SAMPLES = _env_int("GRPCLAB_BENCH_SAMPLES", 3)
+STARTUP_COUNT = _env_int("GRPCLAB_BENCH_STARTUP_COUNT", 3)
 PROFILE_BENCHMARKS = os.environ.get("GRPCLAB_BENCH_PROFILE") == "1"
 
 _bench_results: list[dict] = []
+_latency_results: list[dict] = []
 _dump_paths: list[Path] = []
 
 
@@ -86,6 +88,22 @@ def _report(label, count, elapsed, payload_size, samples):
             "mb_per_sec": mb_per_sec,
             "sample_rates": [
                 _sample_rate(count, sample, payload_size)
+                for sample in samples
+            ],
+        })
+
+
+def _report_latency(label, count, elapsed, samples):
+    m = re.match(r"(\w+) \((\w+)\)", label)
+    if m:
+        _latency_results.append({
+            "transport": m.group(1),
+            "type": m.group(2),
+            "count": count,
+            "elapsed": elapsed,
+            "ms_per_op": elapsed / count * 1000,
+            "sample_ms_per_op": [
+                sample / count * 1000
                 for sample in samples
             ],
         })
@@ -167,6 +185,17 @@ async def _bench(label, payload, count, channel, parallelism=1):
     ]
     elapsed = statistics.median(samples)
     _report(label, count, elapsed, len(payload), samples)
+
+
+async def _bench_lifecycle(label, count, operation):
+    samples = []
+    for _ in range(BENCH_SAMPLES):
+        start = time.perf_counter()
+        for _ in range(count):
+            await operation()
+        samples.append(time.perf_counter() - start)
+    elapsed = statistics.median(samples)
+    _report_latency(label, count, elapsed, samples)
 
 
 async def _runner_with_timeout(coro, label, loop):
@@ -269,8 +298,12 @@ def _fmt_spread(sample_rates: list[float]) -> str:
     return f"{((high - low) / median * 100):>13.1f}%"
 
 
+def _fmt_ms(v: float) -> str:
+    return f"{v:>10.2f} ms"
+
+
 def pytest_terminal_summary(terminalreporter, exitstatus, config):  # noqa: ARG001
-    if not _bench_results:
+    if not _bench_results and not _latency_results:
         # Even if no results, print dump paths if we have them
         if _dump_paths:
             terminalreporter.section("Diagnostic Dumps", bold=True, yellow=True)
@@ -278,61 +311,95 @@ def pytest_terminal_summary(terminalreporter, exitstatus, config):  # noqa: ARG0
                 terminalreporter.write_line(f"  {p}")
         return
 
-    terminalreporter.section("Benchmark Summary", bold=True, blue=True)
+    if _bench_results:
+        terminalreporter.section("Benchmark Summary", bold=True, blue=True)
 
-    for test_type in _bench_types():
-        rows = [r for r in _bench_results if r["type"] == test_type]
-        if not rows:
-            continue
+        for test_type in _bench_types():
+            rows = [r for r in _bench_results if r["type"] == test_type]
+            if not rows:
+                continue
 
-        transports = sorted({r["transport"] for r in rows})
-        parallelisms = sorted({r["parallelism"] for r in rows})
+            transports = sorted({r["transport"] for r in rows})
+            parallelisms = sorted({r["parallelism"] for r in rows})
 
-        heading = f"{test_type.upper()} ({rows[0]['count']} x {rows[0]['payload_size']} B)"
-        terminalreporter.write_line(f"\n{heading}\n")
+            heading = f"{test_type.upper()} ({rows[0]['count']} x {rows[0]['payload_size']} B)"
+            terminalreporter.write_line(f"\n{heading}\n")
 
-        header = f"{'Transport':<12}" + "".join(f"  {f'p={p}':>14}" for p in parallelisms)
-        terminalreporter.write_line(header)
-        terminalreporter.write_line("-" * len(header))
+            header = f"{'Transport':<12}" + "".join(f"  {f'p={p}':>14}" for p in parallelisms)
+            terminalreporter.write_line(header)
+            terminalreporter.write_line("-" * len(header))
 
-        for t in transports:
-            line = f"{t:<12}"
-            for p in parallelisms:
-                match = next((r for r in rows if r["transport"] == t and r["parallelism"] == p), None)
-                if match:
-                    fmt = _fmt_mb if match["payload_size"] else _fmt_msgs
-                    line += "  " + fmt(match["mb_per_sec"] if match["payload_size"] else match["msgs_per_sec"])
-                else:
-                    line += f"  {'N/A':>14}"
-            terminalreporter.write_line(line)
+            for t in transports:
+                line = f"{t:<12}"
+                for p in parallelisms:
+                    match = next((r for r in rows if r["transport"] == t and r["parallelism"] == p), None)
+                    if match:
+                        fmt = _fmt_mb if match["payload_size"] else _fmt_msgs
+                        line += "  " + fmt(match["mb_per_sec"] if match["payload_size"] else match["msgs_per_sec"])
+                    else:
+                        line += f"  {'N/A':>14}"
+                terminalreporter.write_line(line)
 
-    terminalreporter.section("Benchmark Spread", bold=True, blue=True)
-    terminalreporter.write_line(
-        f"Relative sample range across {BENCH_SAMPLES} samples; lower is steadier."
-    )
+    if _latency_results:
+        terminalreporter.section("Lifecycle Benchmark Summary", bold=True, blue=True)
+        types = sorted({r["type"] for r in _latency_results})
+        for test_type in types:
+            rows = [r for r in _latency_results if r["type"] == test_type]
+            terminalreporter.write_line(f"\n{test_type.upper()} ({rows[0]['count']} workers/sample)\n")
+            header = f"{'Transport':<18}  {'median':>14}"
+            terminalreporter.write_line(header)
+            terminalreporter.write_line("-" * len(header))
+            for row in sorted(rows, key=lambda r: r["transport"]):
+                terminalreporter.write_line(
+                    f"{row['transport']:<18}  {_fmt_ms(row['ms_per_op'])}"
+                )
 
-    for test_type in _bench_types():
-        rows = [r for r in _bench_results if r["type"] == test_type]
-        if not rows:
-            continue
+    if _bench_results:
+        terminalreporter.section("Benchmark Spread", bold=True, blue=True)
+        terminalreporter.write_line(
+            f"Relative sample range across {BENCH_SAMPLES} samples; lower is steadier."
+        )
 
-        transports = sorted({r["transport"] for r in rows})
-        parallelisms = sorted({r["parallelism"] for r in rows})
+        for test_type in _bench_types():
+            rows = [r for r in _bench_results if r["type"] == test_type]
+            if not rows:
+                continue
 
-        terminalreporter.write_line(f"\n{test_type.upper()}\n")
-        header = f"{'Transport':<12}" + "".join(f"  {f'p={p}':>14}" for p in parallelisms)
-        terminalreporter.write_line(header)
-        terminalreporter.write_line("-" * len(header))
+            transports = sorted({r["transport"] for r in rows})
+            parallelisms = sorted({r["parallelism"] for r in rows})
 
-        for t in transports:
-            line = f"{t:<12}"
-            for p in parallelisms:
-                match = next((r for r in rows if r["transport"] == t and r["parallelism"] == p), None)
-                if match:
-                    line += "  " + _fmt_spread(match["sample_rates"])
-                else:
-                    line += f"  {'N/A':>14}"
-            terminalreporter.write_line(line)
+            terminalreporter.write_line(f"\n{test_type.upper()}\n")
+            header = f"{'Transport':<12}" + "".join(f"  {f'p={p}':>14}" for p in parallelisms)
+            terminalreporter.write_line(header)
+            terminalreporter.write_line("-" * len(header))
+
+            for t in transports:
+                line = f"{t:<12}"
+                for p in parallelisms:
+                    match = next((r for r in rows if r["transport"] == t and r["parallelism"] == p), None)
+                    if match:
+                        line += "  " + _fmt_spread(match["sample_rates"])
+                    else:
+                        line += f"  {'N/A':>14}"
+                terminalreporter.write_line(line)
+
+    if _latency_results:
+        terminalreporter.section("Lifecycle Benchmark Spread", bold=True, blue=True)
+        terminalreporter.write_line(
+            f"Relative sample range across {BENCH_SAMPLES} samples; lower is steadier."
+        )
+        for test_type in sorted({r["type"] for r in _latency_results}):
+            terminalreporter.write_line(f"\n{test_type.upper()}\n")
+            header = f"{'Transport':<18}  {'spread':>14}"
+            terminalreporter.write_line(header)
+            terminalreporter.write_line("-" * len(header))
+            for row in sorted(
+                [r for r in _latency_results if r["type"] == test_type],
+                key=lambda r: r["transport"],
+            ):
+                terminalreporter.write_line(
+                    f"{row['transport']:<18}  {_fmt_spread(row['sample_ms_per_op'])}"
+                )
 
     if _dump_paths:
         terminalreporter.section("Diagnostic Dumps", bold=True, yellow=True)
