@@ -48,6 +48,11 @@ from grpclib_transports.transfer import (
     iter_chunks as iter_chunks,
     iter_file_chunks as iter_file_chunks,
 )
+from grpclib_transports.workers import (
+    PeerRegistry as PeerRegistry,
+    RegisteredPeer as RegisteredPeer,
+    StdioPeerPool as StdioPeerPool,
+)
 
 __all__ = [
     "DEFAULT_TUNING",
@@ -56,12 +61,15 @@ __all__ = [
     "LogicalRpcPeer",
     "PeerClosedError",
     "PeerIdentity",
+    "PeerRegistry",
+    "RegisteredPeer",
     "RemoteCallError",
     "TransportTuning",
     "Server",
     "SshChannel",
     "SshTransport",
     "StdioChannel",
+    "StdioPeerPool",
     "StdioTransport",
     "build_mapping",
     "connect_tcp",
