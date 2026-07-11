@@ -52,33 +52,29 @@ async def _assert_pipe_round_trip(
             await server_task
 
 
-def test_raw_pipe_transport():
+async def test_raw_pipe_transport() -> None:
     server_to_client_read, server_to_client_write = os.pipe()
     client_to_server_read, client_to_server_write = os.pipe()
 
-    asyncio.run(
-        _assert_pipe_round_trip(
-            client_read_fd=server_to_client_read,
-            client_write_fd=client_to_server_write,
-            server_read_fd=client_to_server_read,
-            server_write_fd=server_to_client_write,
-        )
+    await _assert_pipe_round_trip(
+        client_read_fd=server_to_client_read,
+        client_write_fd=client_to_server_write,
+        server_read_fd=client_to_server_read,
+        server_write_fd=server_to_client_write,
     )
 
 
-def test_multiprocessing_pipe_pair_uses_forkserver_context():
+async def test_multiprocessing_pipe_pair_uses_forkserver_context() -> None:
     assert mp.get_start_method(allow_none=True) is None
     pair = multiprocessing_pipe_pair(preload=["greeter"])
     assert pair.context.get_start_method() == "forkserver"
     assert mp.get_start_method(allow_none=True) is None
     try:
-        asyncio.run(
-            _assert_pipe_round_trip(
-                client_read_fd=os.dup(pair.parent.read_connection.fileno()),
-                client_write_fd=os.dup(pair.parent.write_connection.fileno()),
-                server_read_fd=os.dup(pair.child.read_connection.fileno()),
-                server_write_fd=os.dup(pair.child.write_connection.fileno()),
-            )
+        await _assert_pipe_round_trip(
+            client_read_fd=os.dup(pair.parent.read_connection.fileno()),
+            client_write_fd=os.dup(pair.parent.write_connection.fileno()),
+            server_read_fd=os.dup(pair.child.read_connection.fileno()),
+            server_write_fd=os.dup(pair.child.write_connection.fileno()),
         )
     finally:
         pair.close_parent_connections()

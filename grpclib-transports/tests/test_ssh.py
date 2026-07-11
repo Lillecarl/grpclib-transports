@@ -1,4 +1,3 @@
-import asyncio
 import contextlib
 import os
 import socket
@@ -21,12 +20,12 @@ class _TestSSHServer(asyncssh.SSHServer):
         return True
 
 
-def test_ssh_transport():
+async def test_ssh_transport() -> None:
     fd, sock_path = tempfile.mkstemp(suffix=".sock")
     os.close(fd)
     Path(sock_path).unlink()
 
-    async def run():
+    try:
         key = asyncssh.generate_private_key("ssh-ed25519")  # pyright: ignore[reportUnknownMemberType] -- asyncssh type stubs are incomplete
         sock = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
         sock.setsockopt(socket.SOL_SOCKET, socket.SO_SNDBUF, DEFAULT_TUNING.buffer_size)
@@ -79,9 +78,6 @@ def test_ssh_transport():
         finally:
             acceptor.close()
             await acceptor.wait_closed()
-
-    try:
-        asyncio.run(run())
     finally:
         with contextlib.suppress(OSError):
             Path(sock_path).unlink()

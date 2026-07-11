@@ -139,6 +139,9 @@ from grpclib_transports.workers import (
 from grpclib_transports.workers import (
     StdioPeerPool as StdioPeerPool,
 )
+from grpclib_transports.workers import (
+    WorkerHost as WorkerHost,
+)
 
 __all__ = [
     "DEFAULT_TUNING",
@@ -161,6 +164,7 @@ __all__ = [
     "StdioPeerPool",
     "StdioTransport",
     "TransportTuning",
+    "WorkerHost",
     "build_mapping",
     "connect_ssh",
     "connect_tcp",

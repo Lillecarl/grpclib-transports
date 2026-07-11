@@ -9,7 +9,7 @@ from grpclib.server import Server as GrpclibServer
 
 from grpclib_transports.bidi import LogicalRpcPeer
 from grpclib_transports.protocol import DEFAULT_TUNING, TransportTuning, make_config
-from grpclib_transports.workers import PeerFactory, StdioPeerPool
+from grpclib_transports.workers import PeerFactory, StdioPeerPool, WorkerHost
 
 if TYPE_CHECKING:
     from collections.abc import Collection, Mapping, Sequence
@@ -133,6 +133,17 @@ class Server:
             env=env,
             stderr=stderr,
         )
+
+    def for_workers(
+        self,
+        parent_services: Collection[IServable],
+    ) -> WorkerHost:
+        """Create a server-owned host for managed worker sessions.
+
+        ``parent_services`` are scoped to worker sessions, not exposed on the
+        public Unix/TCP listeners started by this server.
+        """
+        return WorkerHost(parent_services, tuning=self.tuning)
 
     def close(self) -> None:
         self._server.close()

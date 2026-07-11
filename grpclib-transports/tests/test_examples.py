@@ -9,7 +9,9 @@ from pathlib import Path
 import pytest
 
 _EXAMPLES = Path(__file__).resolve().parent.parent / "docs" / "examples"
-_EXAMPLE_FILES = sorted(p.name for p in _EXAMPLES.glob("*.py"))
+_EXAMPLE_FILES = [
+    pytest.param(p.name, marks=pytest.mark.tcp if "tcp" in p.name else ()) for p in sorted(_EXAMPLES.glob("*.py"))
+]
 
 
 @pytest.mark.parametrize("name", _EXAMPLE_FILES)

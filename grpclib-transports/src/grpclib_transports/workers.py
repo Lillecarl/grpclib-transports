@@ -13,7 +13,10 @@ from grpclib_transports.protocol import DEFAULT_TUNING, TransportTuning
 from grpclib_transports.stdio import StdioChannel, stdio_worker
 
 if TYPE_CHECKING:
+    from collections.abc import Collection
     from pathlib import Path
+
+    from grpclib._typing import IServable
 
 PeerT = TypeVar("PeerT", bound=LogicalRpcPeer)
 PeerFactory = Callable[[StdioChannel], Awaitable[PeerT]]
@@ -163,3 +166,42 @@ class StdioPeerPool[PeerT: LogicalRpcPeer]:
     async def __aexit__(self, *exc_info: Any) -> None:
         await self.registry.aclose()
         await self._stack.aclose()
+
+
+class WorkerHost:
+    """Server-owned factory for managed worker pools.
+
+    ``parent_services`` are the services workers are allowed to call on the
+    parent side of a future backchannel protocol.  The current pool API still
+    accepts a peer factory so consumers can define their own frame/schema
+    bridge while the transport lifecycle API stabilizes.
+    """
+
+    def __init__(
+        self,
+        parent_services: Collection[IServable],
+        *,
+        tuning: TransportTuning = DEFAULT_TUNING,
+    ) -> None:
+        self.parent_services = tuple(parent_services)
+        self.tuning = tuning
+
+    def stdio_pool[PeerT: LogicalRpcPeer](
+        self,
+        argv: Sequence[str | Path],
+        *,
+        peer_factory: PeerFactory[PeerT],
+        count: int = 1,
+        cwd: str | Path | None = None,
+        env: Mapping[str, str] | None = None,
+        stderr: Any = None,
+    ) -> StdioPeerPool[PeerT]:
+        return StdioPeerPool(
+            argv,
+            peer_factory=peer_factory,
+            size=count,
+            tuning=self.tuning,
+            cwd=cwd,
+            env=env,
+            stderr=stderr,
+        )

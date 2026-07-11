@@ -20,6 +20,3 @@ grpclib-transports = "grpclib_transports.__main__:main"
 
 [tool.hatch.build.targets.wheel]
 packages = ["src/grpclib_transports"]
-
-[tool.pytest.ini_options]
-testpaths = ["tests"]
