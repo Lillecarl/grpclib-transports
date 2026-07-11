@@ -1,5 +1,9 @@
 from __future__ import annotations
 
+from grpclib_transports.client import (
+    connect_tcp as connect_tcp,
+    connect_unix as connect_unix,
+)
 from grpclib_transports.protocol import (
     DEFAULT_TUNING as DEFAULT_TUNING,
     BaseCustomTransport as BaseCustomTransport,
@@ -45,6 +49,8 @@ __all__ = [
     "StdioChannel",
     "StdioTransport",
     "build_mapping",
+    "connect_tcp",
+    "connect_unix",
     "init_h2_transport",
     "install_h2_fast_receive_patch",
     "is_ssh_available",
