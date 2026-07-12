@@ -220,7 +220,7 @@ async def _open_control_peer(
             yield _logical_to_control(frame)
 
     stub = ControlPlaneStub(channel)
-    responses = stub.connect(frame_source())
+    responses = cast(AsyncGenerator[ControlFrame], stub.connect(frame_source()))
 
     async def receive_frame() -> LogicalFrame | None:
         try:
@@ -235,6 +235,7 @@ async def _open_control_peer(
     finally:
         await outgoing.put(None)
         await peer.aclose()
+        await responses.aclose()
 
 
 @contextlib.asynccontextmanager
