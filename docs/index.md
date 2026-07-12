@@ -60,3 +60,9 @@ await server.start_unix("/tmp/my.sock")
 # Client
 channel = connect_unix("/tmp/my.sock")
 ```
+
+---
+
+*This project is made possible by*
+
+[![Dynamist](../.assets/dynamist-logo.png)](https://dynamist.se/)
