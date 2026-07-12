@@ -344,6 +344,7 @@ class WorkerHost:
         *,
         client_factory: ClientFactory[ClientT] | None = None,
         count: int = 1,
+        on_process_start: Callable[[Any], None] | None = None,
         preload: Sequence[str] = (),
         max_concurrency: int | None = None,
     ) -> AsyncGenerator[WorkerPool[ClientT]]:
@@ -356,6 +357,7 @@ class WorkerHost:
                     manager = multiprocessing_worker_with_backchannel(
                         cast(BackchannelServiceFactory, service_factory),
                         self.parent_services,
+                        on_process_start=on_process_start,
                         preload=preload,
                         tuning=self.tuning,
                         max_concurrency=max_concurrency,
@@ -365,6 +367,7 @@ class WorkerHost:
                         raise TypeError("service_factory must be callable")
                     manager = multiprocessing_worker(
                         cast(ServiceFactory, service_factory),
+                        on_process_start=on_process_start,
                         preload=preload,
                         tuning=self.tuning,
                         max_concurrency=max_concurrency,

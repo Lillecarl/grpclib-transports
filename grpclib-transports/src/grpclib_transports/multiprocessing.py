@@ -184,6 +184,7 @@ async def multiprocessing_worker(
     service_factory: ServiceFactory,
     *,
     context: Any | None = None,
+    on_process_start: Callable[[Any], None] | None = None,
     preload: Sequence[str] = (),
     tuning: TransportTuning = DEFAULT_TUNING,
     max_concurrency: int | None = None,
@@ -199,6 +200,8 @@ async def multiprocessing_worker(
         args=(pair.child, service_factory, tuning, max_concurrency),
     )
     proc.start()
+    if on_process_start is not None:
+        on_process_start(proc)
     pair.close_child_connections()
 
     channel = await pair.parent.open_channel(tuning=tuning)
@@ -216,6 +219,7 @@ async def multiprocessing_worker_with_backchannel(
     parent_services: Collection[IServable],
     *,
     context: Any | None = None,
+    on_process_start: Callable[[Any], None] | None = None,
     preload: Sequence[str] = (),
     tuning: TransportTuning = DEFAULT_TUNING,
     max_concurrency: int | None = None,
@@ -232,6 +236,8 @@ async def multiprocessing_worker_with_backchannel(
         args=(pair.child, service_factory, tuning, max_concurrency),
     )
     proc.start()
+    if on_process_start is not None:
+        on_process_start(proc)
     pair.close_child_connections()
 
     channel = await pair.parent.open_channel(tuning=tuning)

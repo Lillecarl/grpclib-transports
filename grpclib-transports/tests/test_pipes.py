@@ -4,6 +4,7 @@ import asyncio
 import contextlib
 import multiprocessing as mp
 import os
+from typing import Any
 
 import greeter.greeter.common as common_pb2
 import greeter.greeter.server as server_grpc
@@ -92,3 +93,23 @@ async def test_multiprocessing_worker_context_manager() -> None:
         stub = worker_grpc.GreeterWorkerStub(channel)
         response = await stub.say_hello(common_pb2.HelloRequest(name="Worker"))
         assert response.message == "Hello, Worker!"
+
+
+async def test_multiprocessing_worker_reports_started_process() -> None:
+    seen_pid: int | None = None
+
+    def on_process_start(proc: Any) -> None:
+        nonlocal seen_pid
+        seen_pid = proc.pid
+
+    async with multiprocessing_worker(
+        _worker_services,
+        on_process_start=on_process_start,
+        preload=["greeter"],
+    ) as channel:
+        stub = worker_grpc.GreeterWorkerStub(channel)
+        response = await stub.say_hello(common_pb2.HelloRequest(name="Worker"))
+
+    assert response.message == "Hello, Worker!"
+    assert isinstance(seen_pid, int)
+    assert seen_pid > 0
