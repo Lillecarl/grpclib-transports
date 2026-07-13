@@ -83,6 +83,10 @@ ignore = [
   "TRY003",
   # blind except — production code always logs before passing; AGENTS.md convention
   "BLE001",
+  # TC006 wants quoting cast() type expressions — not needed with `from __future__ import annotations`
+  "TC006",
+  # SIM117 wants merging nested with statements — forced flattening hurts readability
+  "SIM117",
 ]
 
 [lint.isort]

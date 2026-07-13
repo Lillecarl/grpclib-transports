@@ -10,6 +10,7 @@ from typing import TYPE_CHECKING, Any, cast
 
 import betterproto2
 import grpclib
+import grpclib.server
 from betterproto2 import grpclib as betterproto2_grpclib
 from grpclib.const import Cardinality, Handler, Status
 
@@ -17,7 +18,6 @@ from grpclib_transports.bidi import FrameKind, LogicalFrame, LogicalRpcPeer
 from grpclib_transports.protocol import build_mapping
 
 if TYPE_CHECKING:
-    import grpclib.server
     from betterproto2.grpclib.grpclib_client import MetadataLike
     from grpclib._typing import IServable
     from grpclib.metadata import Deadline
@@ -66,7 +66,7 @@ class ControlPlaneStub(betterproto2_grpclib.ServiceStub):
         self,
         frames: AsyncIterable[ControlFrame],
         *,
-        timeout: float | None = None,
+        timeout: float | None = None,  # noqa: ASYNC109 -- grpclib stub API, passes through to _stream_stream
         deadline: Deadline | None = None,
         metadata: MetadataLike | None = None,
     ) -> AsyncIterator[ControlFrame]:
