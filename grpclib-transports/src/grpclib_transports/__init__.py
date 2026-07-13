@@ -39,9 +39,6 @@ from grpclib_transports.limits import (
 from grpclib_transports.limits import (
     limit_services_concurrency as limit_services_concurrency,
 )
-from grpclib_transports.monkey_patcher import (
-    MonkeyPatcher as MonkeyPatcher,
-)
 from grpclib_transports.multiprocessing import (
     MultiprocessingPipeEndpoint as MultiprocessingPipeEndpoint,
 )
@@ -204,7 +201,6 @@ __all__ = [
     "LogicalFrame",
     "LogicalRpcPeer",
     "ManagedWorker",
-    "MonkeyPatcher",
     "MultiprocessingPipeEndpoint",
     "MultiprocessingPipePair",
     "PeerClosedError",
