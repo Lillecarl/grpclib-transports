@@ -10,6 +10,7 @@ import greeter.greeter.common as common_pb2
 import greeter.greeter.server as server_grpc
 import greeter.greeter.worker as worker_grpc
 from grpclib_transports.example.server import Greeter, WorkerGreeter
+from grpclib_transports.inproc import inproc_pipe_pair, inproc_worker
 from grpclib_transports.multiprocessing import multiprocessing_pipe_pair, multiprocessing_worker
 from grpclib_transports.pipes import (
     PipeChannel,
@@ -86,6 +87,30 @@ async def test_multiprocessing_pipe_pair_uses_forkserver_context() -> None:
     finally:
         pair.close_parent_connections()
         pair.close_child_connections()
+
+
+async def test_inproc_pipe_pair() -> None:
+    pair = inproc_pipe_pair()
+    try:
+        await _assert_pipe_round_trip(
+            client_read_fd=os.dup(pair.parent.read_fd),
+            client_write_fd=os.dup(pair.parent.write_fd),
+            server_read_fd=os.dup(pair.child.read_fd),
+            server_write_fd=os.dup(pair.child.write_fd),
+        )
+    finally:
+        pair.close_parent_connections()
+        pair.close_child_connections()
+
+
+async def test_inproc_worker_context_manager_keeps_service_accessible() -> None:
+    worker = WorkerGreeter()
+
+    async with inproc_worker(lambda: [worker]) as channel:
+        stub = worker_grpc.GreeterWorkerStub(channel)
+        response = await stub.say_hello(common_pb2.HelloRequest(name="Worker"))
+
+    assert response.message == "Hello, Worker!"
 
 
 async def test_multiprocessing_worker_context_manager() -> None:

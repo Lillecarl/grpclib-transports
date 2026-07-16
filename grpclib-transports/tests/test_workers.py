@@ -94,3 +94,18 @@ async def test_multiprocessing_worker_pool_reports_started_processes() -> None:
     assert response.message == "manager:alpha"
     assert len(seen_pids) == 2
     assert all(isinstance(pid, int) and pid > 0 for pid in seen_pids)
+
+
+async def test_inproc_worker_can_call_parent_services() -> None:
+    async with Server() as server:
+        host = server.endpoint([GreeterManager()]).for_workers()
+
+        async with host.inproc_channels(
+            _worker_services_with_manager,
+            client_factory=worker_grpc.GreeterWorkerStub,
+        ) as pool:
+            response = await pool[0].client.say_hello(common_pb2.HelloRequest(name="alpha"))
+            assert pool[0].id == "inproc-1"
+            assert pool[0].metadata == {"transport": "inproc", "index": 0}
+
+    assert response.message == "manager:alpha"

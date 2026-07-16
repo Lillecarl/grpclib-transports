@@ -33,6 +33,24 @@ from grpclib_transports.control import (
 from grpclib_transports.control import (
     WorkerBackchannel as WorkerBackchannel,
 )
+from grpclib_transports.inproc import (
+    InprocPipeEndpoint as InprocPipeEndpoint,
+)
+from grpclib_transports.inproc import (
+    InprocPipePair as InprocPipePair,
+)
+from grpclib_transports.inproc import (
+    inproc_pipe_pair as inproc_pipe_pair,
+)
+from grpclib_transports.inproc import (
+    inproc_worker as inproc_worker,
+)
+from grpclib_transports.inproc import (
+    inproc_worker_with_backchannel as inproc_worker_with_backchannel,
+)
+from grpclib_transports.inproc import (
+    serve_inproc_endpoint as serve_inproc_endpoint,
+)
 from grpclib_transports.limits import (
     ConcurrencyLimitedService as ConcurrencyLimitedService,
 )
@@ -198,6 +216,8 @@ __all__ = [
     "ControlPlaneStub",
     "Endpoint",
     "GrpcServiceDispatcher",
+    "InprocPipeEndpoint",
+    "InprocPipePair",
     "LogicalFrame",
     "LogicalRpcPeer",
     "ManagedWorker",
@@ -227,6 +247,9 @@ __all__ = [
     "connect_unix",
     "get_forkserver_context",
     "init_h2_transport",
+    "inproc_pipe_pair",
+    "inproc_worker",
+    "inproc_worker_with_backchannel",
     "install_h2_fast_receive_patch",
     "is_ssh_available",
     "iter_chunks",
@@ -247,6 +270,7 @@ __all__ = [
     "pump",
     "resume_h2_protocol",
     "serve_h2",
+    "serve_inproc_endpoint",
     "serve_multiprocessing_endpoint",
     "serve_ssh",
     "serve_stdio",

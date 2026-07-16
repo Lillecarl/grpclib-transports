@@ -9,6 +9,16 @@ from dataclasses import dataclass, field
 from typing import TYPE_CHECKING, Any, TypeVar, cast
 
 from grpclib_transports.bidi import LogicalRpcPeer
+from grpclib_transports.inproc import (
+    BackchannelServiceFactory as InprocBackchannelServiceFactory,
+)
+from grpclib_transports.inproc import (
+    ServiceFactory as InprocServiceFactory,
+)
+from grpclib_transports.inproc import (
+    inproc_worker,
+    inproc_worker_with_backchannel,
+)
 from grpclib_transports.multiprocessing import (
     BackchannelServiceFactory,
     ServiceFactory,
@@ -377,5 +387,47 @@ class WorkerHost:
                     worker_id=f"multiprocessing-{index + 1}",
                     client_factory=client_factory,
                     metadata={"transport": "multiprocessing", "index": index},
+                )
+            yield pool
+
+    @contextlib.asynccontextmanager
+    async def inproc_channels[ClientT = Any](
+        self,
+        service_factory: InprocServiceFactory | InprocBackchannelServiceFactory,
+        *,
+        client_factory: ClientFactory[ClientT] | None = None,
+        count: int = 1,
+        max_concurrency: int | None = None,
+    ) -> AsyncGenerator[WorkerPool[ClientT]]:
+        """Yield local worker channels, using the multiprocessing-style API.
+
+        Service factories execute in the current process, allowing tests to
+        retain references to both worker and parent services.
+        """
+        if count <= 0:
+            raise ValueError("count must be positive")
+
+        async with WorkerPool[ClientT]() as pool:
+            for index in range(count):
+                if self.parent_services:
+                    manager = inproc_worker_with_backchannel(
+                        cast(InprocBackchannelServiceFactory, service_factory),
+                        self.parent_services,
+                        tuning=self.tuning,
+                        max_concurrency=max_concurrency,
+                    )
+                else:
+                    if not callable(service_factory):
+                        raise TypeError("service_factory must be callable")
+                    manager = inproc_worker(
+                        cast(InprocServiceFactory, service_factory),
+                        tuning=self.tuning,
+                        max_concurrency=max_concurrency,
+                    )
+                await pool.add(
+                    manager,
+                    worker_id=f"inproc-{index + 1}",
+                    client_factory=client_factory,
+                    metadata={"transport": "inproc", "index": index},
                 )
             yield pool
