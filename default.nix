@@ -15,6 +15,9 @@ rec {
   grpclib-transports = pkgs.python3Packages.callPackage ./grpclib-transports {
     inherit betterproto2 greeter-proto;
   };
+  grpclib-transports-docs = pkgs.python3Packages.callPackage ./nix/docs.nix {
+    inherit grpclib-transports;
+  };
   pre-commit = pkgs.callPackage ./nix/pkgs/pre-commit { };
   shell = pkgs.python3Packages.callPackage ./nix/shell.nix {
     inherit grpclib-transports pre-commit;

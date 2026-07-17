@@ -1,11 +1,11 @@
 # grpclib-transports
 
-[![Documentation Status](https://readthedocs.org/projects/grpclib-transports/badge/?version=latest)](https://grpclib-transports.readthedocs.io/en/latest/?badge=latest)
+[![Documentation](https://img.shields.io/badge/docs-lillecarl.github.io-blue)](https://lillecarl.github.io/grpclib-transports/)
 
 gRPC over custom asyncio transports — stdio subprocess pipes, SSH sessions,
 Unix-domain sockets, and multiprocessing pipe pairs.
 
-[Documentation](https://grpclib-transports.readthedocs.io/)
+[Documentation](https://lillecarl.github.io/grpclib-transports/)
 
 ---
 
