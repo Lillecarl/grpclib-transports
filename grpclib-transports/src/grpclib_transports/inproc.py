@@ -9,6 +9,7 @@ from collections.abc import AsyncGenerator, Callable, Collection
 from dataclasses import dataclass
 
 from grpclib._typing import IServable
+from grpclib.encoding.base import StatusDetailsCodecBase
 
 from grpclib_transports.control import WorkerBackchannel, open_parent_control_peer
 from grpclib_transports.pipes import PipeChannel, pipe_streams_from_fds
@@ -30,6 +31,7 @@ class InprocPipeEndpoint:
         self,
         *,
         tuning: TransportTuning = DEFAULT_TUNING,
+        status_details_codec: StatusDetailsCodecBase | None = None,
     ) -> PipeChannel:
         """Open a gRPC channel backed by this endpoint's pipe descriptors."""
         reader, writer, transport = await pipe_streams_from_fds(
@@ -38,7 +40,13 @@ class InprocPipeEndpoint:
             transport_name=self.transport_name,
             tuning=tuning,
         )
-        return PipeChannel(reader, writer, transport=transport, tuning=tuning)
+        return PipeChannel(
+            reader,
+            writer,
+            transport=transport,
+            tuning=tuning,
+            status_details_codec=status_details_codec,
+        )
 
     def close_connections(self) -> None:
         """Close the endpoint's original pipe descriptors."""
@@ -79,6 +87,7 @@ async def serve_inproc_endpoint(
     *,
     tuning: TransportTuning = DEFAULT_TUNING,
     max_concurrency: int | None = None,
+    status_details_codec: StatusDetailsCodecBase | None = None,
 ) -> None:
     """Serve gRPC over an in-process pipe endpoint."""
     reader, _writer, transport = await pipe_streams_from_fds(
@@ -94,6 +103,7 @@ async def serve_inproc_endpoint(
         transport,
         tuning=tuning,
         max_concurrency=max_concurrency,
+        status_details_codec=status_details_codec,
     )
 
 
@@ -103,6 +113,7 @@ async def inproc_worker(
     *,
     tuning: TransportTuning = DEFAULT_TUNING,
     max_concurrency: int | None = None,
+    status_details_codec: StatusDetailsCodecBase | None = None,
 ) -> AsyncGenerator[PipeChannel]:
     """Serve local worker services and yield a channel to them.
 
@@ -117,11 +128,15 @@ async def inproc_worker(
             handlers,
             tuning=tuning,
             max_concurrency=max_concurrency,
+            status_details_codec=status_details_codec,
         ),
         name="inproc-worker-server",
     )
     try:
-        channel = await pair.parent.open_channel(tuning=tuning)
+        channel = await pair.parent.open_channel(
+            tuning=tuning,
+            status_details_codec=status_details_codec,
+        )
     except BaseException:
         pair.close_parent_connections()
         pair.close_child_connections()
@@ -147,6 +162,7 @@ async def inproc_worker_with_backchannel(
     *,
     tuning: TransportTuning = DEFAULT_TUNING,
     max_concurrency: int | None = None,
+    status_details_codec: StatusDetailsCodecBase | None = None,
 ) -> AsyncGenerator[PipeChannel]:
     """Serve local worker services with an in-band parent-services backchannel."""
     backchannel = WorkerBackchannel()
@@ -155,6 +171,7 @@ async def inproc_worker_with_backchannel(
         lambda: (*service_factory(backchannel), backchannel.service()),
         tuning=tuning,
         max_concurrency=max_concurrency,
+        status_details_codec=status_details_codec,
     ) as channel:
         async with open_parent_control_peer(channel, parent_services):
             yield channel

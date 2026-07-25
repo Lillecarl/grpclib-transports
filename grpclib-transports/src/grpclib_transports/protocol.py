@@ -36,6 +36,7 @@ if TYPE_CHECKING:
 
     from grpclib._typing import IServable
     from grpclib.const import Handler
+    from grpclib.encoding.base import StatusDetailsCodecBase
 
 _SIZE_UNITS = {
     "": 1,
@@ -408,6 +409,7 @@ async def serve_h2(
     *,
     tuning: TransportTuning = DEFAULT_TUNING,
     max_concurrency: int | None = None,
+    status_details_codec: StatusDetailsCodecBase | None = None,
 ) -> None:
     """Build a server protocol, wire it to a transport, and pump frames."""
     mapping = build_mapping(
@@ -416,7 +418,11 @@ async def serve_h2(
             max_concurrency=max_concurrency,
         )
     )
-    protocol = make_server_protocol(mapping, tuning=tuning)
+    protocol = make_server_protocol(
+        mapping,
+        tuning=tuning,
+        status_details_codec=status_details_codec,
+    )
     init_h2_transport(protocol, transport, tuning=tuning)
     await pump(protocol, reader, tuning=tuning)
 
@@ -449,11 +455,18 @@ def make_server_protocol(
     mapping: dict[str, Handler],
     *,
     tuning: TransportTuning = DEFAULT_TUNING,
+    status_details_codec: StatusDetailsCodecBase | None = None,
 ) -> H2Protocol:
-    """Build a server-side H2 protocol with the given handler mapping."""
+    """Build a server-side H2 protocol with the given handler mapping.
+
+    ``status_details_codec`` is what lets a handler's ``GRPCError.details``
+    reach the client: grpclib encodes it into the ``grpc-status-details-bin``
+    trailer only when a codec is configured, and drops it silently otherwise.
+    The client's channel must be given the same codec to decode it.
+    """
     config = make_config(tuning).__for_server__()
     h2_config = make_h2_config(client_side=False)
-    handler = ServerHandler(mapping, ProtoCodec(), None, _DispatchServerEvents())  # pyright: ignore[reportPrivateUsage] -- grpclib internal API
+    handler = ServerHandler(mapping, ProtoCodec(), status_details_codec, _DispatchServerEvents())  # pyright: ignore[reportPrivateUsage] -- grpclib internal API
     return H2Protocol(handler, config, h2_config)
 
 

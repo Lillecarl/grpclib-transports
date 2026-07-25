@@ -11,6 +11,7 @@ from typing import TYPE_CHECKING, Any
 
 from grpclib import client
 from grpclib._typing import IServable
+from grpclib.encoding.base import StatusDetailsCodecBase
 
 from grpclib_transports.control import WorkerBackchannel, open_parent_control_peer
 from grpclib_transports.protocol import (
@@ -137,6 +138,7 @@ async def serve_stdio(
     *,
     tuning: TransportTuning = DEFAULT_TUNING,
     max_concurrency: int | None = None,
+    status_details_codec: StatusDetailsCodecBase | None = None,
 ) -> None:
     """Serve gRPC over the current process's stdin/stdout.
 
@@ -152,6 +154,7 @@ async def serve_stdio(
             transport,
             tuning=tuning,
             max_concurrency=max_concurrency,
+            status_details_codec=status_details_codec,
         )
 
 
@@ -160,6 +163,7 @@ async def serve_stdio_with_backchannel(
     *,
     tuning: TransportTuning = DEFAULT_TUNING,
     max_concurrency: int | None = None,
+    status_details_codec: StatusDetailsCodecBase | None = None,
 ) -> None:
     """Serve stdio gRPC handlers plus a worker-to-parent backchannel service."""
     backchannel = WorkerBackchannel()
@@ -167,6 +171,7 @@ async def serve_stdio_with_backchannel(
         [*service_factory(backchannel), backchannel.service()],
         tuning=tuning,
         max_concurrency=max_concurrency,
+        status_details_codec=status_details_codec,
     )
 
 
@@ -207,6 +212,7 @@ async def stdio_worker(
     cwd: str | Path | None = None,
     env: Mapping[str, str] | None = None,
     stderr: Any = None,
+    status_details_codec: StatusDetailsCodecBase | None = None,
 ) -> AsyncGenerator[StdioChannel]:
     """Spawn a subprocess and yield a :class:`StdioChannel` connected to its stdin/stdout.
 
@@ -228,7 +234,12 @@ async def stdio_worker(
         raise RuntimeError("stdio worker was not started with stdin/stdout pipes")
 
     bump_subprocess_pipe_buffers(proc, tuning=tuning)
-    channel = StdioChannel(proc.stdout, proc.stdin, tuning=tuning)
+    channel = StdioChannel(
+        proc.stdout,
+        proc.stdin,
+        tuning=tuning,
+        status_details_codec=status_details_codec,
+    )
     try:
         yield channel
     finally:
@@ -245,6 +256,7 @@ async def stdio_worker_with_backchannel(
     cwd: str | Path | None = None,
     env: Mapping[str, str] | None = None,
     stderr: Any = None,
+    status_details_codec: StatusDetailsCodecBase | None = None,
 ) -> AsyncGenerator[StdioChannel]:
     """Spawn a stdio worker and expose parent services on the same channel."""
     async with stdio_worker(
@@ -253,6 +265,7 @@ async def stdio_worker_with_backchannel(
         cwd=cwd,
         env=env,
         stderr=stderr,
+        status_details_codec=status_details_codec,
     ) as channel:
         async with open_parent_control_peer(channel, parent_services):
             yield channel

@@ -28,6 +28,7 @@ if TYPE_CHECKING:
     from collections.abc import AsyncGenerator
 
     from grpclib._typing import IServable
+    from grpclib.encoding.base import StatusDetailsCodecBase
     from grpclib.protocol import H2Protocol
 
 _ASYNCSSH_AVAILABLE = importlib.util.find_spec("asyncssh") is not None
@@ -161,6 +162,7 @@ async def serve_ssh(
     *,
     tuning: TransportTuning = DEFAULT_TUNING,
     max_concurrency: int | None = None,
+    status_details_codec: StatusDetailsCodecBase | None = None,
 ) -> None:
     """Start an asyncssh server that speaks H2 on each session.
 
@@ -186,6 +188,7 @@ async def serve_ssh(
             transport,
             tuning=tuning,
             max_concurrency=max_concurrency,
+            status_details_codec=status_details_codec,
         )
 
     acceptor = await asyncssh.create_server(
@@ -272,6 +275,7 @@ async def connect_ssh(
     password: str | None = None,
     known_hosts: Any = None,
     tuning: TransportTuning = DEFAULT_TUNING,
+    status_details_codec: StatusDetailsCodecBase | None = None,
     **kwargs: Any,
 ) -> AsyncGenerator[SshChannel]:
     """Connect to an SSH server and yield an :class:`SshChannel`.
@@ -289,7 +293,12 @@ async def connect_ssh(
         **kwargs,
     ) as conn:
         stdin, stdout, _stderr = await conn.open_session(encoding=None)
-        channel = SshChannel(stdout, stdin, tuning=tuning)
+        channel = SshChannel(
+            stdout,
+            stdin,
+            tuning=tuning,
+            status_details_codec=status_details_codec,
+        )
         try:
             yield channel
         finally:
@@ -306,6 +315,7 @@ async def connect_ssh_stdio(
     password: str | None = None,
     known_hosts: Any = None,
     tuning: TransportTuning = DEFAULT_TUNING,
+    status_details_codec: StatusDetailsCodecBase | None = None,
     **kwargs: Any,
 ) -> AsyncGenerator[SshChannel]:
     """Execute *command* over SSH and speak gRPC over its stdin/stdout.
@@ -323,7 +333,12 @@ async def connect_ssh_stdio(
         **kwargs,
     ) as conn:
         proc = await conn.create_process(command, encoding=None)
-        channel = SshChannel(proc.stdout, proc.stdin, tuning=tuning)
+        channel = SshChannel(
+            proc.stdout,
+            proc.stdin,
+            tuning=tuning,
+            status_details_codec=status_details_codec,
+        )
         try:
             yield channel
         finally:

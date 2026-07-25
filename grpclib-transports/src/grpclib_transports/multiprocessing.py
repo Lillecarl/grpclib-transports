@@ -11,6 +11,7 @@ from dataclasses import dataclass
 from typing import Any
 
 from grpclib._typing import IServable
+from grpclib.encoding.base import StatusDetailsCodecBase
 
 from grpclib_transports.control import WorkerBackchannel, open_parent_control_peer
 from grpclib_transports.pipes import PipeChannel, pipe_streams_from_fds
@@ -48,6 +49,7 @@ class MultiprocessingPipeEndpoint:
         self,
         *,
         tuning: TransportTuning = DEFAULT_TUNING,
+        status_details_codec: StatusDetailsCodecBase | None = None,
     ) -> PipeChannel:
         read_fd = os.dup(self.read_connection.fileno())
         write_fd = os.dup(self.write_connection.fileno())
@@ -62,6 +64,7 @@ class MultiprocessingPipeEndpoint:
             writer,
             transport=transport,
             tuning=tuning,
+            status_details_codec=status_details_codec,
         )
 
     def close_connections(self) -> None:
@@ -117,6 +120,7 @@ async def serve_multiprocessing_endpoint(
     *,
     tuning: TransportTuning = DEFAULT_TUNING,
     max_concurrency: int | None = None,
+    status_details_codec: StatusDetailsCodecBase | None = None,
 ) -> None:
     """Serve gRPC over a multiprocessing pipe endpoint."""
     reader, _writer, transport = await pipe_streams_from_fds(
@@ -132,6 +136,7 @@ async def serve_multiprocessing_endpoint(
         transport,
         tuning=tuning,
         max_concurrency=max_concurrency,
+        status_details_codec=status_details_codec,
     )
 
 
@@ -140,6 +145,7 @@ def _run_multiprocessing_worker(
     service_factory: ServiceFactory,
     tuning: TransportTuning,
     max_concurrency: int | None,
+    status_details_codec: StatusDetailsCodecBase | None = None,
 ) -> None:
     async def run() -> None:
         await serve_multiprocessing_endpoint(
@@ -147,6 +153,7 @@ def _run_multiprocessing_worker(
             tuple(service_factory()),
             tuning=tuning,
             max_concurrency=max_concurrency,
+            status_details_codec=status_details_codec,
         )
 
     asyncio.run(run())
@@ -157,6 +164,7 @@ def _run_multiprocessing_worker_with_backchannel(
     service_factory: BackchannelServiceFactory,
     tuning: TransportTuning,
     max_concurrency: int | None,
+    status_details_codec: StatusDetailsCodecBase | None = None,
 ) -> None:
     async def run() -> None:
         backchannel = WorkerBackchannel()
@@ -165,6 +173,7 @@ def _run_multiprocessing_worker_with_backchannel(
             (*service_factory(backchannel), backchannel.service()),
             tuning=tuning,
             max_concurrency=max_concurrency,
+            status_details_codec=status_details_codec,
         )
 
     asyncio.run(run())
@@ -188,6 +197,7 @@ async def multiprocessing_worker(
     preload: Sequence[str] = (),
     tuning: TransportTuning = DEFAULT_TUNING,
     max_concurrency: int | None = None,
+    status_details_codec: StatusDetailsCodecBase | None = None,
 ) -> AsyncGenerator[PipeChannel]:
     """Start a forkserver worker process and yield a gRPC channel to it.
 
@@ -197,14 +207,17 @@ async def multiprocessing_worker(
     pair = multiprocessing_pipe_pair(context=context, preload=preload)
     proc = pair.context.Process(
         target=_run_multiprocessing_worker,
-        args=(pair.child, service_factory, tuning, max_concurrency),
+        args=(pair.child, service_factory, tuning, max_concurrency, status_details_codec),
     )
     proc.start()
     if on_process_start is not None:
         on_process_start(proc)
     pair.close_child_connections()
 
-    channel = await pair.parent.open_channel(tuning=tuning)
+    channel = await pair.parent.open_channel(
+        tuning=tuning,
+        status_details_codec=status_details_codec,
+    )
     pair.close_parent_connections()
     try:
         yield channel
@@ -223,6 +236,7 @@ async def multiprocessing_worker_with_backchannel(
     preload: Sequence[str] = (),
     tuning: TransportTuning = DEFAULT_TUNING,
     max_concurrency: int | None = None,
+    status_details_codec: StatusDetailsCodecBase | None = None,
 ) -> AsyncGenerator[PipeChannel]:
     """Start a forkserver worker with an in-band parent-services backchannel.
 
@@ -233,14 +247,17 @@ async def multiprocessing_worker_with_backchannel(
     pair = multiprocessing_pipe_pair(context=context, preload=preload)
     proc = pair.context.Process(
         target=_run_multiprocessing_worker_with_backchannel,
-        args=(pair.child, service_factory, tuning, max_concurrency),
+        args=(pair.child, service_factory, tuning, max_concurrency, status_details_codec),
     )
     proc.start()
     if on_process_start is not None:
         on_process_start(proc)
     pair.close_child_connections()
 
-    channel = await pair.parent.open_channel(tuning=tuning)
+    channel = await pair.parent.open_channel(
+        tuning=tuning,
+        status_details_codec=status_details_codec,
+    )
     pair.close_parent_connections()
     try:
         async with open_parent_control_peer(channel, parent_services):
