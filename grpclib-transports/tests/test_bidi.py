@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import asyncio
+import gc
 
 from grpclib_transports.bidi import LogicalFrame, LogicalRpcPeer, RemoteCallError
 
@@ -37,6 +38,44 @@ async def test_logical_rpc_peer_round_trip() -> None:
     finally:
         await peer_a.aclose()
         await peer_b.aclose()
+
+
+async def test_aclose_reaps_a_reader_that_already_died() -> None:
+    """A transport that breaks before aclose must not leave a task exception.
+
+    The reader task leaves ``_tasks`` as soon as it ends, so a peer that went
+    away first -- a killed process, a broken pipe -- takes its reader with it
+    and aclose finds nothing to reap. The exception the reader carried then
+    reappears later as "Task exception was never retrieved", in whatever code
+    is running when the garbage collector notices.
+    """
+    collected: list[str] = []
+    asyncio.get_running_loop().set_exception_handler(
+        lambda _loop, context: collected.append(str(context.get("message"))),
+    )
+    failed = asyncio.Event()
+
+    async def receive() -> LogicalFrame | None:
+        failed.set()
+        raise ConnectionResetError("connection lost")
+
+    async def send(_frame: LogicalFrame) -> None:
+        return None
+
+    peer = LogicalRpcPeer(send_frame=send, receive_frame=receive)
+    peer.start()
+    await failed.wait()
+    # No `reader.exception()` anywhere in this test, and no local name for the
+    # task: reading the exception *is* retrieving it, which is the very thing
+    # the test asks aclose to do.
+    await asyncio.sleep(0)
+
+    await peer.aclose()
+
+    del peer
+    gc.collect()
+    await asyncio.sleep(0)
+    assert collected == [], f"aclose left an unretrieved task exception: {collected}"
 
 
 async def test_logical_rpc_peer_reports_remote_errors() -> None:

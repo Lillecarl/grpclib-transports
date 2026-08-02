@@ -135,15 +135,32 @@ class LogicalRpcPeer:
         await self._send_frame(LogicalFrame(id=request_id, kind="cancel"))
 
     async def aclose(self) -> None:
-        if self._closed:
-            return
+        # No `if self._closed: return` guard. `_receive_loop` sets that flag in
+        # its own `finally`, so a peer that went away first -- a killed
+        # process, a broken pipe -- already looks closed by the time the owner
+        # calls aclose, and the guard turned the one call that reaps the
+        # reader into a no-op. The body below is idempotent instead: a second
+        # call finds no reader, no tasks and no pending futures.
         self._closed = True
-        if self._reader_task is not None:
-            self._reader_task.cancel()
-        for task in tuple(self._tasks):
+        reader, self._reader_task = self._reader_task, None
+        # The reader is in `_tasks` only while it runs: `start` adds a done
+        # callback that discards it. So a reader that ended on its own is not
+        # in the set, and the exception it carries surfaces later as "Task
+        # exception was never retrieved", in whatever code happens to run when
+        # the garbage collector notices. Take it from the attribute, which
+        # outlives the set.
+        tasks: list[asyncio.Task[None]] = list(self._tasks)
+        if reader is not None and reader not in tasks:
+            tasks.append(reader)
+        for task in tasks:
             task.cancel()
-        for task in tuple(self._tasks):
-            with contextlib.suppress(asyncio.CancelledError):
+        for task in tasks:
+            # Both classes are the same fact here: the peer is going away, and
+            # aclose is the reason. CancelledError is what a reader that was
+            # still running answers; any other exception is why it had already
+            # stopped. Nobody is left to act on either, and _fail_pending
+            # below is what tells the callers that were waiting.
+            with contextlib.suppress(asyncio.CancelledError, Exception):
                 await task
         self._fail_pending(PeerClosedError("peer is closed"))
 
